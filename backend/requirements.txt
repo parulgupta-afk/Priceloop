@@ -12,3 +12,4 @@ beautifulsoup4
 playwright
 python-jose[cryptography]
 passlib[bcrypt]
+email-validator

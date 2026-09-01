@@ -3,10 +3,10 @@
 Build vertically. Do not attempt scraping + Redis/Celery + LLM + forecasting +
 self-healing all in week one -- each phase should produce something runnable.
 
-- [ ] Phase 0 — Project foundation (repo, docs, stack decisions) <- current
-- [ ] Phase 1 — Repository + architecture skeleton
-- [ ] Phase 2 — Authentication (register, login, JWT, roles)
-- [ ] Phase 3 — Product management (create/track products + listings)
+- [x] Phase 0 — Project foundation (repo, docs, stack decisions)
+- [x] Phase 1 — Repository + architecture skeleton
+- [x] Phase 2 — Authentication (register, login, JWT, roles)
+- [x] Phase 3 — Product management (create/track products + listings) <- current
 - [ ] Phase 4 — First scraper (single source, base adapter interface)
 - [ ] Phase 5 — Normalization (price/currency/availability into canonical schema)
 - [ ] Phase 6 — Core database schema
