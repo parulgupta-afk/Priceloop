@@ -9,6 +9,7 @@ cp .env.example .env
 docker compose up --build
 \`\`\`
 
+Frontend: http://localhost:3000
 Backend API: http://localhost:8000/health
 API docs: http://localhost:8000/docs
 

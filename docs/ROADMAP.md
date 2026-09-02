@@ -15,7 +15,7 @@ self-healing all in week one -- each phase should produce something runnable.
 - [ ] Phase 9 — Redis + Celery workers
 - [ ] Phase 10 — Product matching across sources (confidence-scored)
 - [ ] Phase 11 — Competitive analytics (positioning, market average/median)
-- [ ] Phase 12 — Dashboard v1
+- [x] Phase 12 — Dashboard v1 (landing page + component scaffold) <- current
 - [ ] Phase 13 — Anomaly detection (statistical first)
 - [ ] Phase 14 — Price forecasting (moving average -> regression -> later ML)
 - [ ] Phase 15 — AI insight engine (LLM over structured analytics context)

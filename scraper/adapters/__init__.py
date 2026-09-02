@@ -6,9 +6,11 @@ needed to scheduling/orchestration.
 
 from typing import Dict, Type
 
+from scraper.adapters.books_toscrape import BooksToScrapeAdapter
 from scraper.core.base_scraper import BaseScraper
 
 SCRAPERS: Dict[str, Type[BaseScraper]] = {
+    "books_toscrape": BooksToScrapeAdapter,
     # "amazon": AmazonScraper,
     # "walmart": WalmartScraper,
 }
