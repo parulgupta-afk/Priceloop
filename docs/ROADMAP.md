@@ -26,7 +26,7 @@ self-healing all in week one -- each phase should produce something runnable.
 - [ ] Phase 20 — Self-healing scraper (AI suggests selector fix, human approves)
 - [ ] Phase 21 — Screenshot verification
 - [ ] Phase 22 — Cost intelligence
-- [ ] Phase 23 — Security hardening
+- [x] Phase 23 — Security hardening (partial: CORS, secret-key guard, dockerignore, healthchecks) <- current
 - [ ] Phase 24 — Testing (unit, integration, e2e)
 - [ ] Phase 25 — Dockerization
 - [ ] Phase 26 — CI/CD
