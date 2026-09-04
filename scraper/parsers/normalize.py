@@ -38,7 +38,28 @@ def normalize_price(raw: str) -> Tuple[Optional[Decimal], Optional[str]]:
         currency = iso_match.group(1)
 
     numeric = re.sub(r"[^\d.,]", "", raw)
-    numeric = numeric.replace(",", "")  # assumes "," is a thousands separator, not decimal
+    if not numeric:
+        return None, currency
+
+    # "," is ambiguous: "1,299.00" uses it as a thousands separator, but
+    # "12,50" (common outside the US/UK) uses it as the decimal point.
+    # Disambiguate instead of always stripping it -- previously this parsed
+    # "12,50" as 1250 (roughly 100x too high).
+    if "," in numeric and "." in numeric:
+        if numeric.rfind(",") > numeric.rfind("."):
+            # comma comes after the dot -> comma is the decimal separator
+            numeric = numeric.replace(".", "").replace(",", ".")
+        else:
+            numeric = numeric.replace(",", "")
+    elif "," in numeric:
+        after_last_comma = numeric.split(",")[-1]
+        if len(after_last_comma) == 2:
+            # "12,50" style -> comma is a decimal separator
+            numeric = numeric.replace(",", ".")
+        else:
+            # "1,299" style -> comma is a thousands separator
+            numeric = numeric.replace(",", "")
+
     try:
         amount = Decimal(numeric)
     except InvalidOperation:
