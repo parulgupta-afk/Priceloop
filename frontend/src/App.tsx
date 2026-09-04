@@ -21,8 +21,12 @@ import { AdjustStrategyModal } from './components/AdjustStrategyModal';
 import { SetAlertModal } from './components/SetAlertModal';
 import { UpgradePlanModal } from './components/UpgradePlanModal';
 import { HistoryModal } from './components/HistoryModal';
+import { AuthScreen } from './components/AuthScreen';
+import { useAuth } from './context/AuthContext';
 
 export default function App() {
+  const { user, isLoading, logout } = useAuth();
+
   const [currentView, setCurrentView] = useState<ViewMode>('intro');
   const [products, setProducts] = useState<Product[]>(() => {
     const saved = localStorage.getItem('priceloop_products');
@@ -187,6 +191,21 @@ export default function App() {
     setPriceRules((prev) => [newRule, ...prev]);
   };
 
+  // Auth gate: while checking a stored token, show nothing jarring; if
+  // there's no valid session, show the real login/signup screen instead of
+  // the dashboard. Everything below this point only renders once `user` is set.
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#f8f9ff] flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-[#0051d5] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthScreen />;
+  }
+
   // If Intro Screen is active
   if (currentView === 'intro') {
     return (
@@ -214,6 +233,7 @@ export default function App() {
         onOpenUpgradeModal={() => setIsUpgradeModalOpen(true)}
         isOpenMobile={isMobileMenuOpen}
         onCloseMobile={() => setIsMobileMenuOpen(false)}
+        onLogout={logout}
       />
 
       {/* Main Content Area */}

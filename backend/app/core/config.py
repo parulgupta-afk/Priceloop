@@ -9,6 +9,15 @@ class Settings(BaseSettings):
     # Comma-separated in .env, e.g. ALLOWED_ORIGINS=https://priceloop.app,https://staging.priceloop.app
     allowed_origins_raw: str = "*"
 
+    # Stripe -- all blank by default. The app runs fine with billing
+    # disabled (checkout endpoint returns a clear error) until these are
+    # set to real keys from your Stripe dashboard.
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_price_id_professional: str = ""
+    stripe_price_id_enterprise: str = ""
+    frontend_url: str = "http://localhost:5173"
+
     class Config:
         env_file = ".env"
 

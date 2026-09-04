@@ -10,6 +10,7 @@ import {
   HelpCircle,
   Bell,
   Sparkles,
+  LogOut,
 } from 'lucide-react';
 import { ViewMode } from '../types';
 
@@ -22,6 +23,7 @@ interface SidebarProps {
   onOpenUpgradeModal: () => void;
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
+  onLogout?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -33,6 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenUpgradeModal,
   isOpenMobile = false,
   onCloseMobile,
+  onLogout,
 }) => {
   const alertsCount = unreadAlertsCount ?? activeAlertsCount;
   const navItems = [
@@ -179,6 +182,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <HelpCircle className="w-4 h-4 text-[#94a3b8]" />
             <span>Support</span>
           </button>
+          {onLogout && (
+            <button
+              id="nav-logout"
+              onClick={onLogout}
+              className="w-full text-left px-3 py-2 rounded flex items-center gap-3 text-xs text-[#94a3b8] hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+            >
+              <LogOut className="w-4 h-4 text-[#94a3b8]" />
+              <span>Log out</span>
+            </button>
+          )}
         </div>
       </div>
     </nav>

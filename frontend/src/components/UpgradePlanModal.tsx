@@ -1,6 +1,7 @@
-import React from 'react';
-import { X, Check, Sparkles, Zap, Shield, Crown } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Check, Sparkles, Zap, Shield, Crown, Loader2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { api, ApiError } from '../lib/api';
 
 interface UpgradePlanModalProps {
   isOpen: boolean;
@@ -8,19 +9,37 @@ interface UpgradePlanModalProps {
 }
 
 export const UpgradePlanModal: React.FC<UpgradePlanModalProps> = ({ isOpen, onClose }) => {
+  const [submittingPlan, setSubmittingPlan] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
   if (!isOpen) return null;
 
-  const handleSelectPlan = (planName: string) => {
+  const handleSelectPlan = async (planKey: 'professional' | 'enterprise') => {
+    setCheckoutError(null);
+    setSubmittingPlan(planKey);
     try {
-      confetti({ particleCount: 70, spread: 60, origin: { y: 0.5 } });
-    } catch {}
-    alert(`Success: Switched account to ${planName} Plan with high-frequency AI scraping!`);
-    onClose();
+      const { checkout_url } = await api.createCheckoutSession(planKey);
+      try {
+        confetti({ particleCount: 70, spread: 60, origin: { y: 0.5 } });
+      } catch {}
+      // Real redirect to Stripe's hosted checkout page. The plan only
+      // actually activates once Stripe confirms payment via webhook --
+      // this redirect is not itself a "success," it is the start of paying.
+      window.location.href = checkout_url;
+    } catch (e) {
+      setSubmittingPlan(null);
+      if (e instanceof ApiError && e.status === 503) {
+        setCheckoutError('Billing is not set up on this server yet (Stripe keys not configured).');
+      } else {
+        setCheckoutError('Could not start checkout. Please try again.');
+      }
+    }
   };
 
   const plans = [
     {
       name: 'Professional',
+      planKey: 'professional' as const,
       price: '$149',
       period: '/ month',
       description: 'Ideal for growing brands tracking up to 5,000 SKUs across 10 retail channels.',
@@ -37,6 +56,7 @@ export const UpgradePlanModal: React.FC<UpgradePlanModalProps> = ({ isOpen, onCl
     },
     {
       name: 'Enterprise Scale',
+      planKey: 'enterprise' as const,
       price: '$499',
       period: '/ month',
       description: 'Full AI automated repricing engine for omni-channel high velocity merchants.',
@@ -122,18 +142,26 @@ export const UpgradePlanModal: React.FC<UpgradePlanModalProps> = ({ isOpen, onCl
               </div>
 
               <button
-                onClick={() => handleSelectPlan(plan.name)}
-                className={`mt-6 w-full py-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-sm ${
+                onClick={() => handleSelectPlan(plan.planKey)}
+                disabled={submittingPlan !== null}
+                className={`mt-6 w-full py-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-sm disabled:opacity-60 flex items-center justify-center gap-2 ${
                   plan.primary
                     ? 'bg-[#000000] hover:bg-[#1f2937] text-white'
                     : 'bg-white hover:bg-gray-50 text-[#0b1c30] border border-gray-300'
                 }`}
               >
+                {submittingPlan === plan.planKey && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 {plan.cta}
               </button>
             </div>
           ))}
         </div>
+
+        {checkoutError && (
+          <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-center">
+            {checkoutError}
+          </p>
+        )}
       </div>
     </div>
   );

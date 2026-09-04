@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, products
+from app.api import auth, billing, products
 from app.core.config import settings
 from app.core.database import engine
-from app.models import product, user  # noqa: F401 - ensures models are registered
+from app.models import product, subscription, user  # noqa: F401 - ensures models are registered
 from app.models.base import Base
 
 app = FastAPI(title="Priceloop", version="0.1.0")
@@ -22,6 +22,7 @@ app.add_middleware(
 
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(products.router, prefix="/api/products", tags=["products"])
+app.include_router(billing.router, prefix="/api/billing", tags=["billing"])
 
 
 @app.on_event("startup")
