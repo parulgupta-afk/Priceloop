@@ -2,6 +2,8 @@ from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
+
+# pyrefly: ignore [missing-import]
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -13,11 +15,13 @@ from app.services import product_service
 router = APIRouter()
 
 
+@router.get("", response_model=List[ProductOut], include_in_schema=False)
 @router.get("/", response_model=List[ProductOut])
 def list_products(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return product_service.list_products(db, current_user.id)
 
 
+@router.post("", response_model=ProductOut, include_in_schema=False)
 @router.post("/", response_model=ProductOut)
 def create_product(
     payload: ProductCreate,
