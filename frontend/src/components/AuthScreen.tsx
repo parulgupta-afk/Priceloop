@@ -31,7 +31,7 @@ export const AuthScreen: React.FC = () => {
 
   // Quick fill demo credentials
   const handleFillDemo = () => {
-    setEmail("demo@priceloop.local");
+    setEmail("demo@priceloop.ai");
     setPassword("demo12345");
     setLocalError(null);
   };
@@ -444,7 +444,7 @@ export const AuthScreen: React.FC = () => {
                   <span>Fill Demo Credentials</span>
                 </div>
                 <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md group-hover:bg-slate-700 font-mono">
-                  demo@priceloop.local
+                  demo@priceloop.ai
                 </span>
               </button>
             </div>
