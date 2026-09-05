@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: priceloop
+          POSTGRES_PASSWORD: priceloop
+          POSTGRES_DB: priceloop_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U priceloop"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # Test-only values -- never real secrets. Postgres/Redis point at the
+      # service containers above, not anything external.
+      DATABASE_URL: sqlite:///./_ci_test.db
+      SECRET_KEY: ci-test-secret-key-not-for-production
+      ENVIRONMENT: development
+      REDIS_URL: redis://localhost:6379/0
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: pip install --no-cache-dir -r requirements.txt
+
+      - name: Run backend test suite (auth, products, billing, health)
+        working-directory: backend
+        run: python -m pytest tests/ -v
+
+      - name: Run scraper/normalization test suite
+        working-directory: .
+        run: |
+          pip install --no-cache-dir beautifulsoup4 httpx pytest
+          PYTHONPATH=. python -m pytest scraper/tests/ -v
+
+      - name: Verify Alembic migration applies cleanly against a real Postgres
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://priceloop:priceloop@localhost:5432/priceloop_test
+        run: |
+          alembic upgrade head
+          alembic downgrade base
+
+  frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Type-check
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: Production build
+        working-directory: frontend
+        run: npm run build

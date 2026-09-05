@@ -7,3 +7,5 @@ node_modules/
 .pytest_cache/
 dist/
 build/
+*.db
+*.db-journal

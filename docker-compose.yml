@@ -30,7 +30,12 @@ services:
     restart: unless-stopped
 
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    # Dev override: the image's default CMD has no --reload (production-safe);
+    # local dev explicitly opts into it here instead.
+    command: uvicorn app.main:app --app-dir /app/backend --host 0.0.0.0 --port 8000 --reload
     env_file: .env
     depends_on:
       postgres:
@@ -40,12 +45,18 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app
+      # Both packages mounted for hot-reload -- previously only ./backend
+      # was mounted, so `scraper.*` was silently unavailable in the running
+      # container even in local dev.
+      - ./backend:/app/backend
+      - ./scraper:/app/scraper
     restart: unless-stopped
 
   worker:
-    build: ./backend
-    command: celery -A app.workers.celery_app worker --loglevel=info
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: celery -A app.workers.celery_app worker --loglevel=info --workdir /app/backend
     env_file: .env
     depends_on:
       postgres:
@@ -53,7 +64,8 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - ./backend:/app
+      - ./backend:/app/backend
+      - ./scraper:/app/scraper
     restart: unless-stopped
 
 volumes:
