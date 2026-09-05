@@ -2,7 +2,9 @@ import os
 import sys
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
+# pyrefly: ignore [missing-import]
+from sqlalchemy import   engine_from_config
+# pyrefly: ignore [missing-import]
 from sqlalchemy import pool
 
 from alembic import context
@@ -22,7 +24,8 @@ config = context.config
 # Use the real DATABASE_URL from settings/.env instead of whatever is
 # hardcoded in alembic.ini, so migrations always target the same database
 # the app itself connects to.
-config.set_main_option("sqlalchemy.url", settings.database_url)
+sync_db_url = getattr(settings, "database_url_sync", None) or settings.database_url.replace("+asyncpg", "")
+config.set_main_option("sqlalchemy.url", sync_db_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
