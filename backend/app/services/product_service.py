@@ -3,22 +3,33 @@ from uuid import UUID
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.models.product import Product, ProductListing
+from app.models.product import Product, ProductListing, Source
 from app.schemas.product import ProductCreate
 
 
 def create_product(db: Session, owner_id: UUID, payload: ProductCreate) -> Product:
-    product = Product(owner_id=owner_id, name=payload.name, brand=payload.brand, category=payload.category)
+    product = Product(
+        user_id=owner_id,
+        name=payload.name,
+        brand=payload.brand,
+        category=payload.category,
+    )
     db.add(product)
     db.flush()  # get product.id before adding listings
 
     for listing in payload.listings:
+        source_name = (listing.source or "demo").lower().strip()
+        source = db.query(Source).filter(Source.name == source_name).first()
+        if not source:
+            source = Source(name=source_name, base_url=f"https://{source_name}.com")
+            db.add(source)
+            db.flush()
         db.add(
             ProductListing(
                 product_id=product.id,
-                source=listing.source,
-                url=listing.url,
-                tracking_frequency_minutes=listing.tracking_frequency_minutes,
+                source_id=source.id,
+                external_url=listing.url,
+                title=payload.name,
             )
         )
 
