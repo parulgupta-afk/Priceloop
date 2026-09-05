@@ -1,0 +1,56 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: priceloop-postgres
+    environment:
+      POSTGRES_USER: priceloop
+      POSTGRES_PASSWORD: priceloop
+      POSTGRES_DB: priceloop
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U priceloop -d priceloop"]
+      interval: 5s
+      timeout: 5s
+      retries: 8
+
+  redis:
+    image: redis:7-alpine
+    container_name: priceloop-redis
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    image: python:3.11-slim
+    container_name: priceloop-backend
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+      - ./scraper:/scraper
+    environment:
+      DATABASE_URL: postgresql+asyncpg://priceloop:priceloop@postgres:5432/priceloop
+      DATABASE_URL_SYNC: postgresql://priceloop:priceloop@postgres:5432/priceloop
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: dev-secret-change-me
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      PYTHONPATH: /app:/scraper/..
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      bash -c "pip install -q -r requirements.txt &&
+               uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+volumes:
+  postgres_data:
