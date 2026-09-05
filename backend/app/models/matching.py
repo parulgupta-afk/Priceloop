@@ -1,11 +1,14 @@
 import uuid
 from datetime import datetime
 
+# pyrefly: ignore [missing-import]
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String, func
+# pyrefly: ignore [missing-import]
 from sqlalchemy.dialects.postgresql import UUID
+# pyrefly: ignore [missing-import]
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.database import Base
+from app.models.base import Base
 
 
 class ProductMatch(Base):
