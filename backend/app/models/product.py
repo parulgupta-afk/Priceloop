@@ -1,9 +1,13 @@
 import enum
 import uuid
 from datetime import datetime
-
+# pyrefly: ignore [missing-import]  
 from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Numeric, String, Text
+
+# pyrefly: ignore [missing-import]
 from sqlalchemy.dialects.postgresql import JSONB, UUID
+
+# pyrefly: ignore [missing-import]
 from sqlalchemy.orm import relationship, synonym
 
 from app.models.base import Base

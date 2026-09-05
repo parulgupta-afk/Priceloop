@@ -2,6 +2,8 @@ from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
+
+# pyrefly: ignore [missing-import]
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
