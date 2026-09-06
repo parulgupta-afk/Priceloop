@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { ArrowRight } from 'lucide-react';
+import { Logo } from './Logo';
 
 interface IntroScreenProps {
   onEnterDashboard?: () => void;
@@ -166,13 +167,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({
 
       {/* Top Brand Logo */}
       <header className="absolute top-0 left-0 w-full p-8 z-20 flex justify-between items-start animate-fade-in">
-        <div className="flex items-center gap-3">
-          <img
-            alt="Priceloop Logo"
-            className="h-9 w-auto rounded-sm mix-blend-screen opacity-90 invert brightness-200 grayscale"
-            src="https://lh3.googleusercontent.com/aida/AEtjO1WQeqo6ixOTLdiEF8WsqcpSE05ALFPy_50Qf7a7m4nLgudZXyVHq3vBpIYIBNIjPeXbr27D0kplf29DB2KNZLVyrjXL5ees3VfuoXCH5NljZeCDv7qbM5H0oP3ziEXMRCGVckOP2max54Vt391XrDr3pHVZUq5rCz-bIvcI95arFOo4tkbFhZldYDRZujo5rc-y02hTJw-PcbMLAoqJ55dOGJdnhPZg11YFNF9fUwJNAq4fi0o5Drl4PQ4"
-          />
-        </div>
+        <Logo size={36} withText={true} />
       </header>
 
       {/* Central Cinematic Animation */}

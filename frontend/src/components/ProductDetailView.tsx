@@ -19,6 +19,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { Product } from '../types';
+import { Logo } from './Logo';
 
 interface ProductDetailViewProps {
   product: Product;
@@ -89,11 +90,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
         </button>
 
         <div className="flex items-center gap-2">
-          <img
-            alt="Priceloop Logo"
-            className="w-6 h-6 rounded object-contain"
-            src="https://lh3.googleusercontent.com/aida/AEtjO1WQeqo6ixOTLdiEF8WsqcpSE05ALFPy_50Qf7a7m4nLgudZXyVHq3vBpIYIBNIjPeXbr27D0kplf29DB2KNZLVyrjXL5ees3VfuoXCH5NljZeCDv7qbM5H0oP3ziEXMRCGVckOP2max54Vt391XrDr3pHVZUq5rCz-bIvcI95arFOo4tkbFhZldYDRZujo5rc-y02hTJw-PcbMLAoqJ55dOGJdnhPZg11YFNF9fUwJNAq4fi0o5Drl4PQ4"
-          />
+          <Logo size={24} className="rounded" />
           <span className="font-extrabold text-sm tracking-widest text-[#0b1c30]">
             PRICELOOP
           </span>

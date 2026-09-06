@@ -13,6 +13,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { ViewMode } from '../types';
+import { Logo } from './Logo';
 
 interface SidebarProps {
   currentView: ViewMode;
@@ -98,11 +99,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         className="px-6 mb-6 flex items-center gap-3 cursor-pointer group"
         onClick={() => onNavigate('dashboard')}
       >
-        <img
-          alt="Priceloop AI Logo"
-          className="w-8 h-8 rounded-sm object-cover group-hover:scale-105 transition-transform"
-          src="https://lh3.googleusercontent.com/aida/AEtjO1WQeqo6ixOTLdiEF8WsqcpSE05ALFPy_50Qf7a7m4nLgudZXyVHq3vBpIYIBNIjPeXbr27D0kplf29DB2KNZLVyrjXL5ees3VfuoXCH5NljZeCDv7qbM5H0oP3ziEXMRCGVckOP2max54Vt391XrDr3pHVZUq5rCz-bIvcI95arFOo4tkbFhZldYDRZujo5rc-y02hTJw-PcbMLAoqJ55dOGJdnhPZg11YFNF9fUwJNAq4fi0o5Drl4PQ4"
-        />
+        <Logo size={32} className="group-hover:scale-105 transition-transform" />
         <div>
           <h1 className="font-bold text-white text-[19px] leading-tight tracking-tight">
             Priceloop AI
