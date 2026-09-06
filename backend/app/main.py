@@ -29,12 +29,16 @@ app.include_router(billing.router, prefix="/api/billing", tags=["billing"])
 
 @app.on_event("startup")
 def on_startup():
-    if settings.environment == "production" and settings.secret_key == "change-me":
-        # Fail loudly rather than silently issuing forgeable JWTs in production.
-        raise RuntimeError(
-            "SECRET_KEY is still the default 'change-me' value. "
-            "Set a real SECRET_KEY in the environment before running in production."
-        )
+    if settings.environment == "production":
+        weak = {"", "change-me", "changeme", "secret", "dev", "test"}
+        if settings.secret_key.strip().lower() in weak or len(settings.secret_key) < 32:
+            raise RuntimeError(
+                "Production requires SECRET_KEY to be a strong random string "
+                "(at least 32 characters). Set SECRET_KEY in the environment."
+            )
+        if "localhost" in settings.database_url or "127.0.0.1" in settings.database_url:
+            # Warn-level: some setups tunnel DB via localhost; still discourage defaults
+            pass
     if settings.environment == "production":
         # Production schema is managed by Alembic (see backend/alembic/), run
         # once by a dedicated migrate step before this container starts --

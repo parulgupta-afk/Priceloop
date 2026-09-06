@@ -1,10 +1,5 @@
-version: "3.9"
-
-# Production compose: no bind mounts (the image is the deployable artifact,
-# not a window into the host filesystem), no --reload, migrations run
-# exactly once by a dedicated service instead of racing on every container
-# start, and Postgres/Redis are not published to the host at all -- only
-# the backend needs to be reachable from outside this network.
+# Production stack: build images from repo root, no host bind mounts,
+# migrations run once, Postgres/Redis not published to the host.
 
 services:
   postgres:
@@ -16,33 +11,29 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 10s
     restart: unless-stopped
-    # No `ports:` here on purpose -- only other containers on this compose
-    # network can reach Postgres, never the host machine directly.
 
   redis:
-    image: redis:7
+    image: redis:7-alpine
+    volumes:
+      - redisdata:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
-      timeout: 5s
-      retries: 5
+      timeout: 3s
+      retries: 10
     restart: unless-stopped
-    # Same reasoning: no host port published.
 
-  # Runs once per deployment, applies pending migrations, then exits.
-  # backend/worker wait for this to *complete successfully* before they
-  # start -- migrations never race against app startup, and never run
-  # redundantly once per worker replica.
   migrate:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    command: alembic -c /app/backend/alembic.ini upgrade head
+    command: ["alembic", "-c", "/app/backend/alembic.ini", "upgrade", "head"]
     working_dir: /app/backend
     env_file: .env
     environment:
@@ -67,17 +58,39 @@ services:
       migrate:
         condition: service_completed_successfully
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/live')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     restart: unless-stopped
 
   worker:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    command: celery -A app.workers.celery_app worker --loglevel=info --workdir /app/backend
+    command:
+      [
+        "celery",
+        "-A",
+        "app.workers.celery_app",
+        "worker",
+        "--loglevel=info",
+        "--workdir",
+        "/app/backend",
+      ]
     env_file: .env
     environment:
       ENVIRONMENT: production
+      PYTHONPATH: /app
     depends_on:
       postgres:
         condition: service_healthy
@@ -91,11 +104,22 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # Same-origin via Nginx /api proxy (leave empty unless split hosts)
+        VITE_API_URL: ${VITE_API_URL:-}
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
-      - "3000:80"
+      - "${FRONTEND_PORT:-3000}:80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
 
 volumes:
   pgdata:
+  redisdata:

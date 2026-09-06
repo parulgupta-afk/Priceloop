@@ -2,7 +2,15 @@
 // hits an endpoint that was tested end-to-end (see backend/ test runs) --
 // this is not a mock layer, it is the actual integration point.
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+// Production (Nginx): leave VITE_API_URL empty so requests are same-origin
+// and /api is proxied to the backend. Dev: default to local API.
+const _raw = import.meta.env.VITE_API_URL as string | undefined;
+const API_URL =
+  _raw !== undefined && _raw !== ""
+    ? _raw.replace(/\/$/, "")
+    : import.meta.env.PROD
+      ? ""
+      : "http://localhost:8000";
 const TOKEN_KEY = "priceloop_token";
 
 export function getToken(): string | null {

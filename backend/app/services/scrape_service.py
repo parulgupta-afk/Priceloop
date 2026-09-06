@@ -1,41 +1,44 @@
 """
 Orchestrates scraping a ProductListing and storing a PriceObservation.
-Uses the scraper package adapters.
+Uses the scraper package adapters. Uses the same sync Session as the rest of the app.
 """
 
+from __future__ import annotations
+
+import sys
 from datetime import datetime, timezone
 from decimal import Decimal
+from pathlib import Path
 from uuid import UUID
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from app.models.product import AvailabilityStatus, PriceObservation, ProductListing, Source
 from app.services.normalization import normalize_availability, normalize_price, normalize_title
 
-# Import demo scraper – later this will be a registry
-import sys
-from pathlib import Path
-
-# Monorepo root (…/Priceloop) and /app fallbacks for Docker
 _here = Path(__file__).resolve()
 for candidate in (
-    _here.parents[3],           # repo root when running from backend/app/services
-    _here.parents[2],           # backend/ when structure differs
-    Path('/app'),
-    Path('/app/..').resolve(),
+    _here.parents[3],
+    _here.parents[2],
+    Path("/app"),
+    Path("/app/..").resolve(),
 ):
-    if (candidate / 'scraper').is_dir() and str(candidate) not in sys.path:
+    if (candidate / "scraper").is_dir() and str(candidate) not in sys.path:
         sys.path.insert(0, str(candidate))
 
 try:
     from scraper.adapters.demo import DemoScraper  # noqa: E402
     from scraper.core.base import BaseScraper  # noqa: E402
 except ModuleNotFoundError:
-    # Minimal inline fallback so API still boots without scraper package
+
     class BaseScraper:  # type: ignore
         def scrape(self, url: str):
-            return {"title": "Unavailable", "price": None, "currency": "USD", "availability": "UNKNOWN"}
+            return {
+                "title": "Unavailable",
+                "price": None,
+                "currency": "USD",
+                "availability": "UNKNOWN",
+            }
 
     class DemoScraper(BaseScraper):  # type: ignore
         def scrape(self, url: str):
@@ -47,93 +50,60 @@ except ModuleNotFoundError:
             }
 
 
-ADAPTER_REGISTRY: dict[str, type[BaseScraper]] = {
+ADAPTER_REGISTRY: dict[str, type] = {
     "demo": DemoScraper,
 }
 
 
-def get_adapter(source_name: str) -> BaseScraper:
-    key = source_name.lower().strip()
-    cls = ADAPTER_REGISTRY.get(key)
-    if cls is None:
-        # Fallback to demo for development
-        cls = DemoScraper
+def get_adapter(source_name: str):
+    key = (source_name or "demo").lower().strip()
+    cls = ADAPTER_REGISTRY.get(key, DemoScraper)
     return cls()
 
 
-async def scrape_listing(db: AsyncSession, listing_id: UUID) -> PriceObservation:
-    """
-    Fetch the listing, run the appropriate adapter, normalize, and persist.
-    """
-    result = await db.execute(
-        select(ProductListing)
-        .where(ProductListing.id == listing_id)
-        .join(Source)
+def scrape_listing(db: Session, listing_id: UUID) -> PriceObservation:
+    """Fetch listing, run adapter, normalize, persist observation (sync)."""
+    listing = (
+        db.query(ProductListing)
+        .filter(ProductListing.id == listing_id)
+        .first()
     )
-    listing = result.scalar_one_or_none()
     if listing is None:
         raise ValueError(f"Listing {listing_id} not found")
 
-    # Load source name
-    source_result = await db.execute(select(Source).where(Source.id == listing.source_id))
-    source = source_result.scalar_one()
+    source_name = "demo"
+    if listing.source_id:
+        source = db.query(Source).filter(Source.id == listing.source_id).first()
+        if source:
+            source_name = source.name
 
-    adapter = get_adapter(source.name)
-    scraped = await adapter.scrape(listing.external_url)
+    adapter = get_adapter(source_name)
+    raw = adapter.scrape(listing.external_url) or {}
 
-    price, currency = normalize_price(scraped.price)
-    if price is None and scraped.price is not None:
-        # already a Decimal from the adapter
-        try:
-            price = Decimal(str(scraped.price))
-            currency = scraped.currency or "INR"
-        except Exception:
-            price = None
+    title = normalize_title(raw.get("title") or listing.title or "")
+    price_val, detected_currency = normalize_price(raw.get("price"))
+    currency = (raw.get("currency") or detected_currency or listing.currency or "USD")[:3].upper()
+    availability = normalize_availability(raw.get("availability")) or AvailabilityStatus.UNKNOWN.value
 
-    availability = normalize_availability(scraped.availability)
-    title = normalize_title(scraped.title)
+    if price_val is None:
+        raise ValueError(f"No price returned for listing {listing_id}")
 
-    # Update listing snapshot
-    if price is not None:
-        listing.current_price = price
-        listing.currency = currency
-    listing.availability = AvailabilityStatus(availability)
+    obs = PriceObservation(
+        listing_id=listing.id,
+        price=Decimal(str(price_val)),
+        currency=currency,
+        availability=str(availability),
+        scraped_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        raw_data=raw if isinstance(raw, dict) else {"raw": str(raw)},
+    )
+    db.add(obs)
+
+    listing.current_price = obs.price
+    listing.currency = currency
+    listing.availability = obs.availability
+    listing.last_scraped_at = obs.scraped_at
     if title:
         listing.title = title
-    listing.last_scraped_at = datetime.now(timezone.utc)
 
-    # Create observation
-    observation = PriceObservation(
-        listing_id=listing.id,
-        price=price or Decimal("0"),
-        currency=currency,
-        availability=AvailabilityStatus(availability),
-        scraped_at=datetime.now(timezone.utc),
-        raw_data={
-            "title": scraped.title,
-            "rating": scraped.rating,
-            "review_count": scraped.review_count,
-            "seller": scraped.seller,
-            "adapter": adapter.name,
-        },
-    )
-    db.add(observation)
-    await db.flush()
-    await db.refresh(observation)
-
-    # Observability: record a successful scrape job
-    try:
-        from app.models.scraper_ops import ScrapeJobStatus
-        from app.services.health_service import record_job
-
-        await record_job(
-            db,
-            listing_id=listing.id,
-            source_name=source.name,
-            status=ScrapeJobStatus.SUCCESS,
-            duration_ms=50,  # demo value; real adapter can measure
-        )
-    except Exception:
-        pass  # never fail the main scrape path because of metrics
-
-    return observation
+    db.flush()
+    return obs

@@ -20,11 +20,17 @@ if sync_db_url.startswith("sqlite"):
     engine = create_engine(sync_db_url, connect_args={"check_same_thread": False})
 else:
     try:
-        engine = create_engine(sync_db_url, connect_args={"connect_timeout": 2})
+        engine = create_engine(sync_db_url, connect_args={"connect_timeout": 5})
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
         logger.info("Connected to database at %s", sync_db_url)
     except Exception as e:
+        # Production must not silently fall back to a local SQLite file — that
+        # hides misconfiguration and can write "successful" data nowhere useful.
+        if settings.environment == "production":
+            raise RuntimeError(
+                f"Cannot connect to DATABASE_URL in production: {e}"
+            ) from e
         logger.warning(
             "Could not connect to configured database (%s): %s. Falling back to local SQLite at %s",
             sync_db_url,
