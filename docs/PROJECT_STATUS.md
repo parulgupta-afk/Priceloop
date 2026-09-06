@@ -1,35 +1,33 @@
-# PriceLoop — Project Status (deployment audit)
+# PriceLoop — Project Status
 
 ## IMPLEMENTED
 
-| Area | Notes |
-|------|--------|
-| Auth | Register, login (JSON), JWT access tokens, `/api/auth/me` |
-| Products | CRUD-style list/create/get with ownership |
-| Billing | Stripe checkout hooks (requires real Stripe keys) |
-| Health | `/health`, `/health/live`, `/health/ready` (Postgres + Redis) |
-| DB | SQLAlchemy sync + Alembic initial migration |
-| Docker prod | postgres, redis, migrate, backend, worker, frontend (Nginx) |
-| Docker image | Repo-root context copies `backend/` + `scraper/` |
-| Celery | Worker boots; `scrape.listing` / `scrape.all_active` registered (sync DB) |
-| Scraper | Adapter registry + demo adapter + normalization helpers |
-| Frontend | React + Vite production build served by Nginx; `/api` proxied |
-| CI | GitHub Actions: backend tests, scraper tests, Alembic up/down, frontend tsc+build |
-| Security | Production rejects weak `SECRET_KEY`; bcrypt passwords; ownership on products |
+- Auth: register, login (JSON JWT), `/api/auth/me`, bcrypt passwords
+- Products: create/list/get with ownership checks
+- Billing: Stripe checkout hooks (optional keys)
+- Health: `/health`, `/health/live`, `/health/ready`
+- SQLAlchemy + Alembic initial schema
+- Celery worker with sync scrape tasks
+- Scraper package + demo adapter + normalization
+- React/Vite frontend + Nginx production image
+- Docker Compose production stack (postgres, redis, migrate, backend, worker, frontend)
+- CI: backend tests, scraper tests, Alembic, frontend tsc + build
+- Portable JSON columns (Postgres JSONB / SQLite JSON for tests)
 
-## PLANNED / PARTIAL
+## OPTIONAL / FUTURE
 
-| Area | Notes |
-|------|--------|
-| Full analytics/anomaly/forecast API surface | Services exist under `app/services/`; not all mounted on `main.py` |
-| Live Amazon/Flipkart adapters | Not claimed; demo adapter only |
-| pgvector embeddings pipeline | Schema/docs mention; not required for current models |
-| Prometheus/Grafana | Not implemented |
-| Refresh tokens | Access JWT only in current security module |
-| Deep learning forecasting | Statistical helpers only |
+- Full analytics/anomaly/forecast HTTP routes mounted on main
+- Live marketplace adapters (Amazon etc.)
+- pgvector embedding pipeline
+- Refresh tokens
+- Prometheus/Grafana
 
-## DEPLOYMENT READINESS
+## TEST DEPENDENCIES
 
-- Compose production file is structurally complete.
-- **Runtime Docker verification depends on host Docker + a filled production `.env`.**
-- CI exists on `main`; success depends on GitHub Actions runners (not guaranteed offline).
+Install test tooling with:
+
+```bash
+pip install -r backend/requirements-dev.txt
+```
+
+Production images use `requirements.txt` only (no pytest).

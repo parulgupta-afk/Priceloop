@@ -5,7 +5,8 @@ from datetime import datetime
 # pyrefly: ignore [missing-import]
 from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Integer, String, Text, func
 # pyrefly: ignore [missing-import]
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import UUID
+from app.models.types import PortableJSON
 # pyrefly: ignore [missing-import]
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -52,7 +53,7 @@ class ScrapeResult(Base):
         UUID(as_uuid=True), ForeignKey("scrape_jobs.id", ondelete="CASCADE"), index=True
     )
     success: Mapped[bool] = mapped_column(Boolean, default=False)
-    extracted_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    extracted_data: Mapped[dict | None] = mapped_column(PortableJSON, nullable=True)
     raw_html_snippet: Mapped[str | None] = mapped_column(Text, nullable=True)
     screenshot_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -100,7 +101,7 @@ class CostRecord(Base):
     units: Mapped[float | None] = mapped_column(Float, nullable=True)  # requests, tokens, etc.
     period_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    meta: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    meta: Mapped[dict | None] = mapped_column(PortableJSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

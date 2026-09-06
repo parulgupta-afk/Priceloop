@@ -5,7 +5,8 @@ from datetime import datetime
 # pyrefly: ignore [missing-import]
 from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, String, Text, func
 # pyrefly: ignore [missing-import]
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import UUID
+from app.models.types import PortableJSON
 # pyrefly: ignore [missing-import]
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -42,7 +43,7 @@ class Alert(Base):
     )
     rule_type: Mapped[AlertRuleType] = mapped_column(Enum(AlertRuleType), nullable=False)
     threshold: Mapped[float | None] = mapped_column(Float, nullable=True)
-    channels: Mapped[dict | None] = mapped_column(JSONB, default=lambda: {"in_app": True})
+    channels: Mapped[dict | None] = mapped_column(PortableJSON, default=lambda: {"in_app": True})
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -62,7 +63,7 @@ class AlertEvent(Base):
         Enum(AlertSeverity), default=AlertSeverity.INFO
     )
     message: Mapped[str] = mapped_column(Text, nullable=False)
-    payload: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    payload: Mapped[dict | None] = mapped_column(PortableJSON, nullable=True)
     triggered_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -80,7 +81,7 @@ class AIInsight(Base):
     )
     insight_type: Mapped[str] = mapped_column(String(50), default="SUMMARY")
     summary: Mapped[str] = mapped_column(Text, nullable=False)
-    evidence: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    evidence: Mapped[dict | None] = mapped_column(PortableJSON, nullable=True)
     recommendation: Mapped[str | None] = mapped_column(Text, nullable=True)
     confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

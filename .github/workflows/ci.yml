@@ -19,10 +19,10 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U priceloop"
+          --health-cmd "pg_isready -U priceloop -d priceloop_test"
           --health-interval 5s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
 
       redis:
         image: redis:7
@@ -32,15 +32,14 @@ jobs:
           --health-cmd "redis-cli ping"
           --health-interval 5s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
 
     env:
-      # Test-only values -- never real secrets. Postgres/Redis point at the
-      # service containers above, not anything external.
-      DATABASE_URL: sqlite:///./_ci_test.db
-      SECRET_KEY: ci-test-secret-key-not-for-production
+      SECRET_KEY: ci-test-secret-key-not-for-production-use-32chars
       ENVIRONMENT: development
       REDIS_URL: redis://localhost:6379/0
+      # Default test suite uses SQLite (see tests/conftest.py). Migration job overrides DATABASE_URL.
+      DATABASE_URL: sqlite:///./_ci_test.db
 
     steps:
       - uses: actions/checkout@v4
@@ -49,27 +48,39 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install backend dependencies
+      - name: Install backend runtime + test dependencies
         working-directory: backend
-        run: pip install --no-cache-dir -r requirements.txt
-
-      - name: Run backend test suite (auth, products, billing, health)
-        working-directory: backend
-        run: python -m pytest tests/ -v
-
-      - name: Run scraper/normalization test suite
-        working-directory: .
         run: |
-          pip install --no-cache-dir beautifulsoup4 httpx pytest
-          PYTHONPATH=. python -m pytest scraper/tests/ -v
+          python -m pip install --upgrade pip
+          pip install --no-cache-dir -r requirements-dev.txt
 
-      - name: Verify Alembic migration applies cleanly against a real Postgres
+      - name: Sanity-check imports (app + scraper package)
+        working-directory: .
+        env:
+          PYTHONPATH: backend:.
+        run: |
+          python -c "from app.main import app; print('app_ok', app.title)"
+          python -c "import scraper; print('scraper_ok')"
+
+      - name: Run backend test suite
+        working-directory: backend
+        run: python -m pytest tests/ -v --tb=short
+
+      - name: Run scraper test suite
+        working-directory: .
+        env:
+          PYTHONPATH: .
+        run: python -m pytest scraper/tests/ -v --tb=short
+
+      - name: Alembic upgrade / downgrade / upgrade against Postgres
         working-directory: backend
         env:
           DATABASE_URL: postgresql://priceloop:priceloop@localhost:5432/priceloop_test
+          DATABASE_URL_SYNC: postgresql://priceloop:priceloop@localhost:5432/priceloop_test
         run: |
           alembic upgrade head
           alembic downgrade base
+          alembic upgrade head
 
   frontend:
     runs-on: ubuntu-latest
@@ -80,16 +91,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
 
-      - name: Type-check
+      - name: TypeScript check
         working-directory: frontend
         run: npx tsc --noEmit
 
-      - name: Production build
+      - name: Production build (same-origin API via empty VITE_API_URL)
         working-directory: frontend
         env:
           VITE_API_URL: ""

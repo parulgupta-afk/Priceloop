@@ -5,7 +5,8 @@ from datetime import datetime
 from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Numeric, String, Text
 
 # pyrefly: ignore [missing-import]
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import Uuid as UUID
+from app.models.types import PortableJSON
 
 # pyrefly: ignore [missing-import]
 from sqlalchemy.orm import relationship, synonym
@@ -46,7 +47,7 @@ class Product(Base):
     gtin = Column(String(50), nullable=True)
     description = Column(Text, nullable=True)
     image_url = Column(String(1000), nullable=True)
-    attributes = Column(JSONB, nullable=True)
+    attributes = Column(PortableJSON, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -97,6 +98,6 @@ class PriceObservation(Base):
     currency = Column(String(3), default="USD", nullable=False)
     availability = Column(String(12), default=AvailabilityStatus.IN_STOCK.value, nullable=False)
     scraped_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    raw_data = Column(JSONB, nullable=True)
+    raw_data = Column(PortableJSON, nullable=True)
 
     listing = relationship("ProductListing", back_populates="observations")
