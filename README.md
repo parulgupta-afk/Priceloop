@@ -98,6 +98,13 @@ whether it's actually read by any code yet or reserved for a future
 phase. Never commit a real `.env` -- it's gitignored everywhere in this
 repo on purpose.
 
+When `ENVIRONMENT=production`, the application performs strict fail-fast validation on startup:
+- `SECRET_KEY`: Must be at least 32 characters and cannot use default/insecure placeholders.
+- `DATABASE_URL`: Must be a PostgreSQL connection (`postgresql://` or `postgresql+asyncpg://`). SQLite is strictly prohibited in production.
+- `REDIS_URL`: Must be a valid Redis connection string (`redis://` or `rediss://`).
+- `CORS_ORIGINS`: Must be explicit, comma-separated allowed origins. Wildcards (`*`) are disallowed.
+- S3 Credentials: If provided, default `minioadmin` credentials are prohibited.
+
 ## 8. Database migrations
 
 Schema is managed by Alembic (`backend/alembic/`), not by wildly running

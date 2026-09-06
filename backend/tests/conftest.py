@@ -11,6 +11,7 @@ os.environ.setdefault("ENVIRONMENT", "development")
 # on this port -- this is what lets test_health.py assert the *unreachable*
 # path actually gets detected, not just the happy path.
 os.environ.setdefault("REDIS_URL", "redis://localhost:1/0")
+os.environ.setdefault("STRIPE_SECRET_KEY", "")
 
 import pytest
 from fastapi.testclient import TestClient

@@ -17,6 +17,10 @@ SQLITE_FALLBACK_PATH = BACKEND_DIR / "test.db"
 sync_db_url = settings.database_url_sync or settings.database_url.replace("+asyncpg", "")
 
 if sync_db_url.startswith("sqlite"):
+    if settings.environment == "production":
+        raise RuntimeError(
+            "PostgreSQL is mandatory in production. SQLite is not allowed when ENVIRONMENT=production."
+        )
     engine = create_engine(sync_db_url, connect_args={"check_same_thread": False})
 else:
     try:

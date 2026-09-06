@@ -5,7 +5,8 @@
 - Auth: register, login (JSON JWT), `/api/auth/me`, bcrypt passwords
 - Products: create/list/get with ownership checks
 - Billing: Stripe checkout hooks (optional keys)
-- Health: `/health`, `/health/live`, `/health/ready`
+- Health: `/health` (legacy), `/health/live` (process liveness, no external dependencies), `/health/ready` (readiness with PostgreSQL and Redis connectivity verification returning 503 on dependency failure)
+- Security & Validation: Fail-fast production startup validation (`ENVIRONMENT=production` rejects SQLite, missing/weak `SECRET_KEY`, missing/invalid `REDIS_URL`, wildcard CORS origins `*`, and default `minioadmin` credentials)
 - SQLAlchemy + Alembic initial schema
 - Celery worker with sync scrape tasks
 - Scraper package + demo adapter + normalization

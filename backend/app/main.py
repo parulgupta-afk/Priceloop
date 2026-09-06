@@ -1,4 +1,5 @@
 import json
+import logging
 
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,6 +9,8 @@ from app.core.config import settings
 from app.core.database import engine
 from app.models import product, subscription, user  # noqa: F401 - ensures models are registered
 from app.models.base import Base
+
+logger = logging.getLogger("priceloop.api")
 
 app = FastAPI(title="Priceloop", version="0.1.0")
 
@@ -30,16 +33,8 @@ app.include_router(billing.router, prefix="/api/billing", tags=["billing"])
 @app.on_event("startup")
 def on_startup():
     if settings.environment == "production":
-        weak = {"", "change-me", "changeme", "secret", "dev", "test"}
-        if settings.secret_key.strip().lower() in weak or len(settings.secret_key) < 32:
-            raise RuntimeError(
-                "Production requires SECRET_KEY to be a strong random string "
-                "(at least 32 characters). Set SECRET_KEY in the environment."
-            )
-        if "localhost" in settings.database_url or "127.0.0.1" in settings.database_url:
-            # Warn-level: some setups tunnel DB via localhost; still discourage defaults
-            pass
-    if settings.environment == "production":
+        # Enforce all production validations fail-fast
+        settings.validate_production()
         # Production schema is managed by Alembic (see backend/alembic/), run
         # once by a dedicated migrate step before this container starts --
         # see docker-compose.prod.yml. Running create_all() here too would
@@ -80,15 +75,28 @@ def health_ready():
         with engine.connect() as conn:
             conn.exec_driver_sql("SELECT 1")
         checks["database"] = True
-    except Exception:
+    except Exception as exc:
+        logger.warning("Readiness check: database unreachable (%s)", type(exc).__name__)
         checks["database"] = False
 
+    r = None
     try:
-        r = redis_client.from_url(settings.redis_url, socket_connect_timeout=2)
+        r = redis_client.from_url(
+            settings.redis_url,
+            socket_connect_timeout=2,
+            socket_timeout=2,
+        )
         r.ping()
         checks["redis"] = True
-    except Exception:
+    except Exception as exc:
+        logger.warning("Readiness check: Redis unreachable (%s)", type(exc).__name__)
         checks["redis"] = False
+    finally:
+        if r is not None:
+            try:
+                r.close()
+            except Exception:
+                pass
 
     all_ok = all(checks.values())
     return Response(
@@ -96,3 +104,4 @@ def health_ready():
         media_type="application/json",
         status_code=200 if all_ok else 503,
     )
+
