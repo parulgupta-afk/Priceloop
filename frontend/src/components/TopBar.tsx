@@ -12,7 +12,6 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { AlertItem, Product, ViewMode } from '../types';
-import { Logo } from './Logo';
 
 interface TopBarProps {
   currentView?: ViewMode;
@@ -99,7 +98,11 @@ export const TopBar: React.FC<TopBarProps> = ({
           {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
         <div className="flex items-center gap-2">
-          <Logo size={28} className="rounded" />
+          <img
+            alt="Priceloop Logo"
+            className="w-7 h-7 rounded object-contain"
+            src="/logo.png"
+          />
           <span className="font-bold text-sm tracking-tight text-[#0b1c30]">
             Priceloop AI
           </span>

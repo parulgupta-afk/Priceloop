@@ -13,7 +13,6 @@ import {
   LogOut,
 } from 'lucide-react';
 import { ViewMode } from '../types';
-import { Logo } from './Logo';
 
 interface SidebarProps {
   currentView: ViewMode;
@@ -99,7 +98,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
         className="px-6 mb-6 flex items-center gap-3 cursor-pointer group"
         onClick={() => onNavigate('dashboard')}
       >
-        <Logo size={32} className="group-hover:scale-105 transition-transform" />
+        <img
+          alt="Priceloop AI Logo"
+          className="w-8 h-8 rounded-sm object-cover group-hover:scale-105 transition-transform"
+          src="/logo.png"
+        />
         <div>
           <h1 className="font-bold text-white text-[19px] leading-tight tracking-tight">
             Priceloop AI

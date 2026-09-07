@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Product } from '../types';
-import { Logo } from './Logo';
 
 interface TrackProductModalProps {
   isOpen: boolean;
@@ -205,7 +204,11 @@ export const TrackProductModal: React.FC<TrackProductModalProps> = ({
         {/* Left Side: Branding & Multi-step Progress */}
         <div className="bg-[#eff4ff] p-8 border-b md:border-b-0 md:border-r border-[#e2e8f0] w-full md:w-1/3 flex flex-col">
           <div className="flex items-center gap-3 mb-10">
-            <Logo size={32} className="rounded" />
+            <img
+              alt="Priceloop Logo"
+              className="w-8 h-8 rounded object-contain"
+              src="/logo.png"
+            />
             <span className="font-bold text-sm tracking-tight text-[#0b1c30]">
               PRICELOOP
             </span>
