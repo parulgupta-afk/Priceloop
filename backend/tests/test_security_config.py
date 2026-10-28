@@ -122,6 +122,17 @@ def test_production_succeeds_with_valid_config():
     s.validate_production()
     assert s.allowed_origins == ["https://priceloop.app", "https://staging.priceloop.app"]
 
+    # Also test with postgresql+asyncpg driver prefix
+    s_async = Settings(
+        environment="production",
+        secret_key="c" * 32,
+        database_url="postgresql+asyncpg://user:pass@localhost:5432/db",
+        redis_url="redis://localhost:6379/0",
+        cors_origins="https://priceloop.app",
+        s3_endpoint="",
+    )
+    s_async.validate_production()
+
     # Also test with valid S3 credentials
     s_with_s3 = Settings(
         environment="production",

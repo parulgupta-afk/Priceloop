@@ -83,7 +83,11 @@ class Settings(BaseSettings):
             raise ValueError(
                 "Production requires a PostgreSQL DATABASE_URL. SQLite is not allowed in production."
             )
-        if not (self.database_url.startswith("postgresql://") or self.database_url.startswith("postgres://")):
+        if not (
+            self.database_url.startswith("postgresql://")
+            or self.database_url.startswith("postgres://")
+            or self.database_url.startswith("postgresql+asyncpg://")
+        ):
             raise ValueError(
                 "Production DATABASE_URL must be a PostgreSQL connection string (postgresql://...)."
             )
