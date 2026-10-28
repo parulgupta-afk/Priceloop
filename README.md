@@ -86,7 +86,7 @@ sed -i.bak "s/SECRET_KEY=.*/SECRET_KEY=$(openssl rand -hex 32)/" .env && rm .env
 docker compose up --build
 ```
 
-- Backend: http://localhost:8000 (docs at `/docs`)
+- Backend: `http://localhost:8000` (docs at `/docs`)
 - Frontend: run separately for now (see section 11) -- it isn't in
   `docker-compose.yml` since Vite's dev server is normally run directly
 
@@ -99,6 +99,7 @@ phase. Never commit a real `.env` -- it's gitignored everywhere in this
 repo on purpose.
 
 When `ENVIRONMENT=production`, the application performs strict fail-fast validation on startup:
+
 - `SECRET_KEY`: Must be at least 32 characters and cannot use default/insecure placeholders.
 - `DATABASE_URL`: Must be a PostgreSQL connection (`postgresql://` or `postgresql+asyncpg://`). SQLite is strictly prohibited in production.
 - `REDIS_URL`: Must be a valid Redis connection string (`redis://` or `rediss://`).
