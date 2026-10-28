@@ -19,7 +19,7 @@ see Known Limitations below.
 
 ## 2. Architecture
 
-```
+```text
 React frontend (Vite)
         |
         v  (JWT bearer auth)
@@ -56,7 +56,7 @@ See `docs/ARCHITECTURE.md` for more detail.
 
 ## 5. Repository structure
 
-```
+```text
 priceloop/
 ├── backend/
 │   ├── app/            # FastAPI app: api/, models/, schemas/, services/, core/
