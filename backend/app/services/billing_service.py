@@ -62,17 +62,23 @@ def create_checkout_session(db: Session, user: User, plan: str) -> str:
 
     sub_row = get_or_create_subscription_row(db, user)
 
-    session = stripe.checkout.Session.create(
-        mode="subscription",
-        customer_email=user.email if not sub_row.stripe_customer_id else None,
-        customer=sub_row.stripe_customer_id or None,
-        line_items=[{"price": price_id, "quantity": 1}],
-        success_url=f"{settings.frontend_url}/?checkout=success",
-        cancel_url=f"{settings.frontend_url}/?checkout=canceled",
-        client_reference_id=str(user.id),
-        metadata={"user_id": str(user.id), "plan": plan},
-    )
-    return session.url
+    try:
+        session = stripe.checkout.Session.create(
+            mode="subscription",
+            customer_email=user.email if not sub_row.stripe_customer_id else None,
+            customer=sub_row.stripe_customer_id or None,
+            line_items=[{"price": price_id, "quantity": 1}],
+            success_url=f"{settings.frontend_url}/?checkout=success",
+            cancel_url=f"{settings.frontend_url}/?checkout=canceled",
+            client_reference_id=str(user.id),
+            metadata={"user_id": str(user.id), "plan": plan},
+        )
+        return session.url
+    except stripe.error.StripeError as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Stripe checkout error: {getattr(e, 'user_message', None) or str(e)}"
+        )
 
 
 def handle_webhook_event(db: Session, payload: bytes, sig_header: str) -> None:
