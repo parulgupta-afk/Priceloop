@@ -16,7 +16,7 @@ See `docs/PROJECT_STATUS.md` and phase docs under `docs/` for an honest implemen
 ## Core capabilities (API v0.6)
 
 | Area | Endpoints / behavior |
-|------|----------------------|
+| ------ | ---------------------- |
 | Auth | Register / login / me (rate-limited) |
 | Products | CRUD + `?q=` search, ownership isolation |
 | Prices | `GET /api/products/{id}/prices`, manual scrape |
@@ -65,7 +65,7 @@ cd backend && python -m scripts.load_test --base http://localhost:8000 --users 5
 ## Documentation
 
 | Doc | Purpose |
-|-----|---------|
+| ----- | --------- |
 | `docs/PROJECT_AUDIT.md` | Component status |
 | `docs/DEPLOYMENT.md` | Production checklist |
 | `docs/ARCHITECTURE.md` | Layering |
