@@ -35,3 +35,15 @@ class ProductOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class PriceObservationOut(BaseModel):
+    id: UUID
+    listing_id: UUID
+    price: float
+    currency: str
+    availability: str
+    scraped_at: datetime
+
+    class Config:
+        from_attributes = True

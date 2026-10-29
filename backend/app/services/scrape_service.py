@@ -50,9 +50,32 @@ except ModuleNotFoundError:
             }
 
 
+def _load_books_adapter():
+    try:
+        from scraper.adapters.books_toscrape import BooksToScrapeAdapter
+        class BooksToScrapeCompat(BaseScraper):  # type: ignore
+            def scrape(self, url: str):
+                adapter = BooksToScrapeAdapter()
+                raw = adapter.fetch(url)
+                data = adapter.parse(raw)
+                return {
+                    "title": data.title,
+                    "price": data.price,
+                    "currency": data.currency or "GBP",
+                    "availability": data.availability or "UNKNOWN",
+                    "source": "books_toscrape",
+                }
+        return BooksToScrapeCompat
+    except Exception:
+        return None
+
 ADAPTER_REGISTRY: dict[str, type] = {
     "demo": DemoScraper,
 }
+_books = _load_books_adapter()
+if _books is not None:
+    ADAPTER_REGISTRY["books_toscrape"] = _books
+    ADAPTER_REGISTRY["books"] = _books
 
 
 def get_adapter(source_name: str):

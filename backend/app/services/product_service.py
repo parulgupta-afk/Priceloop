@@ -38,8 +38,18 @@ def create_product(db: Session, owner_id: UUID, payload: ProductCreate) -> Produ
     return product
 
 
-def list_products(db: Session, owner_id: UUID):
-    return db.query(Product).filter(Product.owner_id == owner_id).all()
+def list_products(
+    db: Session,
+    owner_id: UUID,
+    q: str | None = None,
+    skip: int = 0,
+    limit: int = 50,
+) -> list[Product]:
+    query = db.query(Product).filter(Product.user_id == owner_id)
+    if q:
+        like = f"%{q.strip()}%"
+        query = query.filter(Product.name.ilike(like))
+    return query.order_by(Product.created_at.desc()).offset(skip).limit(limit).all()
 
 
 def get_product(db: Session, owner_id: UUID, product_id: UUID) -> Product:

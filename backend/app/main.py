@@ -4,7 +4,7 @@ import logging
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, billing, products
+from app.api import auth, billing, prices, products
 from app.core.config import settings
 from app.core.database import engine
 from app.models import product, subscription, user  # noqa: F401 - ensures models are registered
@@ -12,7 +12,7 @@ from app.models.base import Base
 
 logger = logging.getLogger("priceloop.api")
 
-app = FastAPI(title="Priceloop", version="0.1.0")
+app = FastAPI(title="Priceloop", version="0.3.0")
 
 # CORS: the frontend is deployed on its own origin (e.g. a Vercel domain),
 # so without this every browser request to the API is blocked. Configure
@@ -28,6 +28,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(products.router, prefix="/api/products", tags=["products"])
 app.include_router(billing.router, prefix="/api/billing", tags=["billing"])
+app.include_router(prices.router, prefix="/api", tags=["prices"])
 
 
 @app.on_event("startup")

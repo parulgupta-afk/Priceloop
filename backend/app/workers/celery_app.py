@@ -26,3 +26,6 @@ celery_app.conf.update(
 
 # Ensure task modules are registered when the worker starts
 celery_app.conf.imports = ("app.workers.tasks",)
+
+# Load beat schedule
+from app.workers import scheduler  # noqa: E402,F401
