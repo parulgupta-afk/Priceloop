@@ -1,102 +1,87 @@
 """
-AI Insight Engine.
-Builds a structured context from deterministic analytics, then asks an LLM
-to explain it in plain language. Falls back to a template when no API key
-is configured (so demos always work).
+Evidence-grounded market analyst.
+Computes stats in code; optional LLM only explains structured evidence.
+Never invents prices or causes without data.
 """
-
+from __future__ import annotations
 from typing import Any
 from uuid import UUID
-
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.core.config import get_settings
-from app.services.analytics_service import get_product_analytics, get_competitor_snapshot
+from sqlalchemy.orm import Session
+from app.services.analytics_service import get_product_analytics
 from app.services.anomaly_service import detect_price_anomalies
-from app.services.forecast_service import forecast_price
+from app.core.config import settings
 
 
-async def build_structured_context(
-    db: AsyncSession, product_id: UUID
-) -> dict[str, Any]:
-    analytics = await get_product_analytics(db, product_id, days=30)
-    competitors = await get_competitor_snapshot(db, product_id)
-    anomalies = await detect_price_anomalies(db, product_id, days=60)
-    forecast = await forecast_price(db, product_id, horizon_days=7)
-
+def build_evidence(db: Session, product_id: UUID, days: int = 30) -> dict[str, Any]:
+    analytics = get_product_analytics(db, product_id, days=days)
+    anomalies = detect_price_anomalies(db, product_id, days=max(days, 60))
     return {
         "analytics": analytics,
-        "competitive": competitors,
         "anomalies": {
             "count": anomalies.get("anomaly_count", 0),
             "items": anomalies.get("anomalies", [])[:5],
         },
-        "forecast": forecast.get("forecast"),
+        "window_days": days,
     }
 
 
-def _template_insight(context: dict[str, Any]) -> dict[str, Any]:
-    """Deterministic fallback when no LLM key is present."""
-    a = context.get("analytics") or {}
-    c = context.get("competitive") or {}
-    f = context.get("forecast") or {}
-    anomalies = context.get("anomalies") or {}
-
-    current = a.get("current_price")
-    change = a.get("price_change_pct")
-    position = c.get("position")
-    anomaly_count = anomalies.get("count", 0)
-    direction = (f or {}).get("direction", "Likely Stable")
-    conf = (f or {}).get("confidence")
-
+def _rule_based_summary(evidence: dict[str, Any]) -> dict[str, Any]:
+    a = evidence.get("analytics") or {}
+    obs = a.get("observation_count", 0)
+    if obs == 0:
+        return {
+            "summary": "No price observations are available for the selected period.",
+            "observations": [],
+            "possible_explanations": [],
+            "confidence": "none",
+            "limitations": ["No historical price data stored yet."],
+        }
     parts = []
-    if current is not None:
-        parts.append(f"Current price is {current}.")
-    if change is not None:
-        direction_word = "down" if change < 0 else "up"
-        parts.append(f"It has moved {abs(change)}% {direction_word} over the selected window.")
-    if position:
-        parts.append(f"Market position: {position}.")
-    if anomaly_count:
-        parts.append(f"{anomaly_count} notable price anomal{'y' if anomaly_count == 1 else 'ies'} detected recently.")
-    if direction:
-        conf_txt = f" (confidence {conf})" if conf is not None else ""
-        parts.append(f"Short-term outlook: {direction}{conf_txt}.")
-
-    summary = " ".join(parts) if parts else "Insufficient data to generate an insight."
-
-    recommendation = "Monitor closely."
-    if change is not None and change <= -10:
-        recommendation = "Significant drop detected — consider reviewing inventory or promotional response."
-    elif position and "Premium" in position:
-        recommendation = "Priced above market median — verify differentiation or consider a small adjustment."
-
+    if a.get("current_price") is not None:
+        parts.append(f"Latest observed price is {a.get('currency', '')} {a['current_price']}.")
+    if a.get("percent_change") is not None:
+        direction = "decreased" if a["percent_change"] < 0 else "increased"
+        parts.append(f"It {direction} by {abs(a['percent_change'])}% versus the previous observation.")
+    if a.get("min_price") is not None and a.get("max_price") is not None:
+        parts.append(f"In the window, observed range was {a['min_price']}–{a['max_price']}.")
+    an_count = evidence.get("anomalies", {}).get("count", 0)
+    if an_count:
+        parts.append(f"{an_count} statistical anomal(ies) were flagged; this is not proof of a promotion or error.")
+    observations = []
+    for key in ("current_price", "previous_price", "percent_change", "min_price", "max_price", "avg_price"):
+        if a.get(key) is not None:
+            observations.append({"metric": key, "value": a[key]})
     return {
-        "type": "PRICE_SUMMARY",
-        "summary": summary,
-        "evidence": context,
-        "recommendation": recommendation,
-        "confidence": conf or 0.7,
-        "source": "template",
+        "summary": " ".join(parts) if parts else "Price data exists but changes could not be summarized.",
+        "observations": observations,
+        "possible_explanations": [
+            "Genuine market price change",
+            "Temporary listing or currency artifact",
+            "Insufficient history for strong inference",
+        ],
+        "confidence": "limited" if obs < 5 else "moderate",
+        "limitations": [
+            "Explanations are not causal claims.",
+            "Only recorded PriceLoop observations were used.",
+            "External events (competitor launches, sales) are unknown unless stored as data.",
+        ],
     }
 
 
-async def generate_insight(
-    db: AsyncSession, product_id: UUID
-) -> dict[str, Any]:
-    context = await build_structured_context(db, product_id)
-    settings = get_settings()
-
-    # If an LLM key exists we could call it here via LiteLLM / OpenAI.
-    # For reliability and offline demos we always provide the template path.
-    if not settings.openai_api_key and not settings.anthropic_api_key:
-        return _template_insight(context)
-
-    # Placeholder for real LLM call – keep structured context only
-    # (prevents hallucination of prices).
-    try:
-        # Real integration can be added later:
-        # response = await call_llm(system=..., user=json.dumps(context))
-        return _template_insight(context)
-    except Exception:
-        return _template_insight(context)
+def generate_insight(db: Session, product_id: UUID, days: int = 30) -> dict[str, Any]:
+    evidence = build_evidence(db, product_id, days=days)
+    base = _rule_based_summary(evidence)
+    base["evidence"] = {
+        "observation_count": evidence.get("analytics", {}).get("observation_count"),
+        "anomaly_count": evidence.get("anomalies", {}).get("count"),
+        "window_days": days,
+    }
+    # Optional LLM polish — only if key configured; still constrained to evidence
+    api_key = getattr(settings, "openai_api_key", "") or getattr(settings, "llm_api_key", "")
+    if api_key:
+        try:
+            base["llm"] = "skipped_in_batch"  # keep offline-safe; wire provider later
+        except Exception:
+            pass
+    base["model"] = "rule_based_v1"
+    return base

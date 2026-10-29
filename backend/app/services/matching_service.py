@@ -1,156 +1,84 @@
 """
-Product matching foundation.
-Uses rule-based + fuzzy string similarity.
-Later we will add sentence-transformers embeddings + pgvector.
+Deterministic + fuzzy product matching across catalog (sync).
+Explains scores; does not silently merge incompatible variants.
 """
-
+from __future__ import annotations
 import re
 from difflib import SequenceMatcher
 from typing import Any
 from uuid import UUID
-
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.models.matching import ProductMatch
+from sqlalchemy.orm import Session
 from app.models.product import Product
 
 
-def _normalize_text(text: str | None) -> str:
+def _norm(text: str | None) -> str:
     if not text:
         return ""
-    text = text.lower().strip()
-    text = re.sub(r"[^\w\s]", " ", text)
-    text = re.sub(r"\s+", " ", text)
-    return text
-
-
-def _extract_brand_model(name: str, brand: str | None, model: str | None) -> tuple[str, str]:
-    brand_n = _normalize_text(brand) if brand else ""
-    model_n = _normalize_text(model) if model else ""
-    name_n = _normalize_text(name)
-
-    # Very simple heuristics – will be improved
-    if not brand_n and name_n:
-        parts = name_n.split()
-        if parts:
-            brand_n = parts[0]
-    return brand_n, model_n or name_n
+    t = text.lower().strip()
+    t = re.sub(r"[^\w\s]", " ", t)
+    return re.sub(r"\s+", " ", t).strip()
 
 
 def compute_match_score(a: Product, b: Product) -> dict[str, Any]:
-    """
-    Return a structured score between two products.
-    """
-    brand_a, model_a = _extract_brand_model(a.name, a.brand, a.model)
-    brand_b, model_b = _extract_brand_model(b.name, b.brand, b.model)
-
-    title_sim = SequenceMatcher(None, _normalize_text(a.name), _normalize_text(b.name)).ratio()
-    brand_match = 1.0 if brand_a and brand_a == brand_b else (0.6 if brand_a in brand_b or brand_b in brand_a else 0.0)
-    model_sim = SequenceMatcher(None, model_a, model_b).ratio() if model_a and model_b else 0.0
-
-    # Weighted final score
-    final = (
-        0.35 * title_sim
-        + 0.30 * brand_match
-        + 0.35 * model_sim
+    brand_a = _norm(a.brand) or (_norm(a.name).split()[0] if _norm(a.name) else "")
+    brand_b = _norm(b.brand) or (_norm(b.name).split()[0] if _norm(b.name) else "")
+    model_a = _norm(getattr(a, "model", None) or "")
+    model_b = _norm(getattr(b, "model", None) or "")
+    title_sim = SequenceMatcher(None, _norm(a.name), _norm(b.name)).ratio()
+    brand_match = 1.0 if brand_a and brand_a == brand_b else (
+        0.6 if brand_a and brand_b and (brand_a in brand_b or brand_b in brand_a) else 0.0
     )
-    final = round(min(max(final, 0.0), 1.0), 3)
-
+    model_sim = SequenceMatcher(None, model_a, model_b).ratio() if model_a and model_b else 0.0
+    final = round(min(max(0.35 * title_sim + 0.30 * brand_match + 0.35 * model_sim, 0.0), 1.0), 3)
     if final >= 0.90:
-        level = "HIGH"
+        label = "likely_same"
     elif final >= 0.75:
-        level = "MEDIUM"
+        label = "possible_match"
     else:
-        level = "LOW"
-
+        label = "unlikely"
     return {
-        "confidence": final,
-        "level": level,
-        "breakdown": {
+        "score": final,
+        "label": label,
+        "components": {
             "title_similarity": round(title_sim, 3),
             "brand_match": brand_match,
             "model_similarity": round(model_sim, 3),
         },
-        "method": "fuzzy+rules",
+        "reason": f"title={title_sim:.2f}, brand={brand_match:.2f}, model={model_sim:.2f}",
     }
 
 
-async def find_potential_matches(
-    db: AsyncSession,
+def find_matches_for_product(
+    db: Session,
+    user_id: UUID,
     product_id: UUID,
-    min_confidence: float = 0.60,
-    limit: int = 10,
-) -> list[dict[str, Any]]:
-    """
-    Compare the given product against other products of the same user
-    and return ranked potential matches.
-    """
-    result = await db.execute(select(Product).where(Product.id == product_id))
-    target = result.scalar_one_or_none()
-    if not target:
-        return []
-
-    others = await db.execute(
-        select(Product).where(
-            Product.user_id == target.user_id,
-            Product.id != product_id,
-            Product.is_active == True,
-        )
+    min_score: float = 0.75,
+    limit: int = 20,
+) -> dict[str, Any]:
+    product = db.query(Product).filter(Product.id == product_id, Product.user_id == user_id).first()
+    if not product:
+        return {"product_id": str(product_id), "matches": [], "error": "not_found"}
+    candidates = (
+        db.query(Product)
+        .filter(Product.user_id == user_id, Product.id != product_id, Product.is_active.is_(True))
+        .limit(200)
+        .all()
     )
-    candidates = list(others.scalars().all())
-
     scored = []
-    for cand in candidates:
-        score = compute_match_score(target, cand)
-        if score["confidence"] >= min_confidence:
-            scored.append(
-                {
-                    "product_id": str(cand.id),
-                    "name": cand.name,
-                    "brand": cand.brand,
-                    "model": cand.model,
-                    **score,
-                }
-            )
-
-    scored.sort(key=lambda x: x["confidence"], reverse=True)
-    return scored[:limit]
-
-
-async def create_match(
-    db: AsyncSession,
-    product_a_id: UUID,
-    product_b_id: UUID,
-    confidence: float,
-    method: str = "fuzzy+rules",
-    reviewed: bool = False,
-    is_confirmed: bool = False,
-) -> ProductMatch:
-    # Avoid duplicates / direction issues
-    a, b = sorted([product_a_id, product_b_id], key=str)
-    existing = await db.execute(
-        select(ProductMatch).where(
-            ProductMatch.product_a_id == a,
-            ProductMatch.product_b_id == b,
-        )
-    )
-    match = existing.scalar_one_or_none()
-    if match:
-        match.confidence = confidence
-        match.method = method
-        match.reviewed = reviewed
-        match.is_confirmed = is_confirmed
-    else:
-        match = ProductMatch(
-            product_a_id=a,
-            product_b_id=b,
-            confidence=confidence,
-            method=method,
-            reviewed=reviewed,
-            is_confirmed=is_confirmed,
-        )
-        db.add(match)
-    await db.flush()
-    await db.refresh(match)
-    return match
+    for other in candidates:
+        s = compute_match_score(product, other)
+        if s["score"] >= min_score:
+            scored.append({
+                "product_id": str(other.id),
+                "name": other.name,
+                "brand": other.brand,
+                **s,
+            })
+    scored.sort(key=lambda x: x["score"], reverse=True)
+    return {
+        "product_id": str(product_id),
+        "name": product.name,
+        "match_count": len(scored[:limit]),
+        "matches": scored[:limit],
+        "min_score": min_score,
+    }
