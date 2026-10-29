@@ -2,6 +2,8 @@ import json
 import logging
 
 from fastapi import FastAPI, Response
+from app.core.middleware import RequestContextMiddleware
+from app.core import metrics as app_metrics
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import auth, billing, prices, products
@@ -14,7 +16,7 @@ from app.models.base import Base
 
 logger = logging.getLogger("priceloop.api")
 
-app = FastAPI(title="Priceloop", version="0.4.0")
+app = FastAPI(title="Priceloop", version="0.5.0")
 
 # CORS: the frontend is deployed on its own origin (e.g. a Vercel domain),
 # so without this every browser request to the API is blocked. Configure
@@ -26,6 +28,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RequestContextMiddleware)
 
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(products.router, prefix="/api/products", tags=["products"])
@@ -48,6 +51,12 @@ def on_startup():
         # Local dev / tests: just create whatever's missing, no migration
         # ceremony needed for quick iteration.
         Base.metadata.create_all(bind=engine)
+
+
+@app.get("/metrics")
+def metrics():
+    """Process-local counters for ops dashboards (Prometheus optional later)."""
+    return app_metrics.snapshot()
 
 
 @app.get("/health")
