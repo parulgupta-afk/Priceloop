@@ -254,6 +254,7 @@ python -m scripts.seed_demo_sync
 ```
 
 Default credentials created for local exploration:
+
 - **Email:** `demo@priceloop.ai`
 - **Password:** `demo12345`
 
@@ -264,6 +265,7 @@ You can also click the **"Fill Demo Credentials"** button on the frontend login 
 ## API Reference
 
 Interactive API documentation and schema explorers are hosted automatically:
+
 - **Swagger UI:** [`http://localhost:8000/docs`](http://localhost:8000/docs)
 - **ReDoc:** [`http://localhost:8000/redoc`](http://localhost:8000/redoc)
 
@@ -298,6 +300,7 @@ Interactive API documentation and schema explorers are hosted automatically:
 ### 1. Statistical Anomaly Detection
 
 Located in [`backend/app/services/anomaly_service.py`](backend/app/services/anomaly_service.py), PriceLoop evaluates price movements across multiple concurrent algorithms:
+
 - **Z-Score:** Flags standard deviation outliers ($\vert z \vert > 2.5$).
 - **Interquartile Range (IQR):** Identifies observations beyond $1.5 \times \text{IQR}$ fences, resilient against extreme historical skew.
 - **Median Absolute Deviation (MAD):** Non-parametric outlier assessment suited for volatile retail catalogs.
@@ -306,6 +309,7 @@ Located in [`backend/app/services/anomaly_service.py`](backend/app/services/anom
 ### 2. Product Matching & Explainability
 
 Located in [`backend/app/services/matching_service.py`](backend/app/services/matching_service.py), PriceLoop reconciles identical products across disparate retailers:
+
 - **Token Overlap:** Normalized Jaccard similarity across brand-stripped product titles.
 - **Brand & Model Disambiguation:** Exact and phonetic brand checks coupled with model number extraction.
 - **Score Breakdown:** Outputs both aggregate match confidence ($[0.0, 1.0]$) and human-readable reasoning strings.
