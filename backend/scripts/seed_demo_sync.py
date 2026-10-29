@@ -158,14 +158,14 @@ def main() -> None:
                     f"seeded listing only (scrape failed) {item['name'][:50]!r}: "
                     f"{type(exc).__name__}: {exc}"
                 )
-                print("  → later: POST /api/listings/<id>/scrape after network is available")
+                print("  -> later: POST /api/listings/<id>/scrape after network is available")
 
         print()
         print("done.")
         print(f"  login:   {DEMO_EMAIL} / {DEMO_PASSWORD}")
         print(f"  source:  {SOURCE_NAME} only (permitted practice site)")
         print(f"  scraped: {scraped_ok} ok, {scraped_fail} failed")
-        print("  history grows only from real scrapes / Celery jobs — no synthetic series.")
+        print("  history grows only from real scrapes / Celery jobs -- no synthetic series.")
     finally:
         db.close()
 

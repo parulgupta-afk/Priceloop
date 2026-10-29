@@ -54,7 +54,7 @@ except ModuleNotFoundError:
 def _load_books_adapter():
     try:
         from scraper.adapters.books_toscrape import BooksToScrapeAdapter
-        class BooksToScrapeCompat(BaseScraper):  # type: ignore
+        class BooksToScrapeCompat:
             def scrape(self, url: str):
                 adapter = BooksToScrapeAdapter()
                 raw = adapter.fetch(url)
