@@ -46,20 +46,26 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   const [isChartExpanded, setIsChartExpanded] = useState(false);
 
   // SVG Chart calculation
-  const history = product.priceHistory;
-  const minVal = Math.min(...history.map((h) => Math.min(h.targetPrice, h.marketAvg))) - 15;
-  const maxVal = Math.max(...history.map((h) => Math.max(h.targetPrice, h.marketAvg))) + 15;
+  const history = product?.priceHistory || [];
+  const minVal =
+    history.length > 0
+      ? Math.min(...history.map((h) => Math.min(h.targetPrice, h.marketAvg))) - 15
+      : 0;
+  const maxVal =
+    history.length > 0
+      ? Math.max(...history.map((h) => Math.max(h.targetPrice, h.marketAvg))) + 15
+      : 100;
   const range = maxVal - minVal || 1;
 
   // Convert points to SVG coordinates (viewBox 0 0 100 60)
   const targetPoints = history.map((item, idx) => {
-    const x = (idx / (history.length - 1)) * 90 + 5;
+    const x = history.length > 1 ? (idx / (history.length - 1)) * 90 + 5 : 50;
     const y = 55 - ((item.targetPrice - minVal) / range) * 45;
     return { x, y, date: item.date, target: item.targetPrice, avg: item.marketAvg };
   });
 
   const avgPoints = history.map((item, idx) => {
-    const x = (idx / (history.length - 1)) * 90 + 5;
+    const x = history.length > 1 ? (idx / (history.length - 1)) * 90 + 5 : 50;
     const y = 55 - ((item.marketAvg - minVal) / range) * 45;
     return { x, y, date: item.date, target: item.targetPrice, avg: item.marketAvg };
   });

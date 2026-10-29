@@ -17,7 +17,7 @@ import { ViewMode } from '../types';
 interface SidebarProps {
   currentView: ViewMode;
   onNavigate: (view: ViewMode) => void;
-  activeAlertsCount: number;
+  activeAlertsCount?: number;
   unreadAlertsCount?: number;
   onOpenTrackModal?: () => void;
   onOpenUpgradeModal: () => void;

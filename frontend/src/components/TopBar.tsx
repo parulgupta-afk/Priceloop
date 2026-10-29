@@ -143,7 +143,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                 <div
                   key={product.id}
                   onClick={() => {
-                    onSelectProduct(product);
+                    onSelectProduct?.(product);
                     setIsSearchFocused(false);
                     onSearchChange('');
                   }}
@@ -223,7 +223,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                   <div
                     key={alert.id}
                     onClick={() => {
-                      onSelectAlert(alert);
+                      onSelectAlert?.(alert);
                       setIsAlertsOpen(false);
                     }}
                     className={`p-3.5 hover:bg-[#eff4ff] cursor-pointer transition-colors ${
@@ -315,7 +315,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                 <button
                   onClick={() => {
                     setIsProfileOpen(false);
-                    onReplayIntro();
+                    onReplayIntro?.();
                   }}
                   className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-[#eff4ff] rounded-md flex items-center gap-2 cursor-pointer"
                 >
@@ -325,7 +325,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                 <button
                   onClick={() => {
                     setIsProfileOpen(false);
-                    onOpenHistoryModal();
+                    onOpenHistoryModal?.();
                   }}
                   className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-[#eff4ff] rounded-md flex items-center gap-2 cursor-pointer"
                 >
