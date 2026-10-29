@@ -159,8 +159,18 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               <span className="font-mono text-[11px] font-semibold text-[#76777d] uppercase tracking-wider">
                 Target Price
               </span>
-              <span className="inline-flex items-center gap-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold">
-                <ArrowDown className="w-3 h-3" /> 2.4%
+              <span
+                className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                  product.priceChangeDirection === 'down'
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : product.priceChangeDirection === 'up'
+                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                    : 'bg-gray-50 text-gray-700 border-gray-200'
+                }`}
+              >
+                {product.priceChangeDirection === 'down' && <ArrowDown className="w-3 h-3" />}
+                {product.priceChangeDirection === 'up' && <ArrowUpRight className="w-3 h-3" />}
+                {Math.abs(product.priceDeltaPercent)}%
               </span>
             </div>
             <div className="text-3xl sm:text-4xl font-extrabold text-[#0b1c30] font-mono tracking-tight">

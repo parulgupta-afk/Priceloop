@@ -159,8 +159,22 @@ export default function App() {
             1
           )
         ),
+        priceChangeDirection:
+          newTargetPrice < prev.marketAvg
+            ? 'down'
+            : newTargetPrice > prev.marketAvg
+            ? 'up'
+            : 'neutral',
+        aiInsight: {
+          ...prev.aiInsight,
+          description: `Repriced via ${strategyName}. Target updated to $${newTargetPrice.toFixed(
+            2
+          )}.`,
+        },
       }));
     }
+
+    showToast(`Repricing applied: ${strategyName} updated target to $${newTargetPrice.toFixed(2)}.`);
   };
 
   // Handle resolving an alert

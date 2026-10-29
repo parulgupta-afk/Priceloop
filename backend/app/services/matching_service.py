@@ -36,9 +36,19 @@ def compute_match_score(a: Product, b: Product) -> dict[str, Any]:
         label = "possible_match"
     else:
         label = "unlikely"
+
+    if final >= 0.85:
+        level = "HIGH"
+    elif final >= 0.70:
+        level = "MEDIUM"
+    else:
+        level = "LOW"
+
     return {
         "score": final,
+        "confidence": final,
         "label": label,
+        "level": level,
         "components": {
             "title_similarity": round(title_sim, 3),
             "brand_match": brand_match,

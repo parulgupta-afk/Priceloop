@@ -20,6 +20,8 @@ export const AdjustStrategyModal: React.FC<AdjustStrategyModalProps> = ({
   const [selectedStrategy, setSelectedStrategy] = useState<'undercut' | 'match' | 'margin' | 'custom'>('undercut');
   const [customPrice, setCustomPrice] = useState(product.targetPrice);
 
+  const cogsVal = product.cogs || product.targetPrice * 0.7;
+
   const strategies = [
     {
       id: 'undercut' as const,
@@ -38,8 +40,8 @@ export const AdjustStrategyModal: React.FC<AdjustStrategyModalProps> = ({
     {
       id: 'margin' as const,
       title: 'Profit Margin Maximizer (30% Gross)',
-      description: 'Locks target price at minimum 30% gross margin above current COGS ($' + product.cogs.toFixed(0) + ').',
-      target: product.cogs / 0.7,
+      description: 'Locks target price at minimum 30% gross margin above current COGS ($' + cogsVal.toFixed(0) + ').',
+      target: cogsVal / 0.7,
       icon: TrendingUp,
     },
     {

@@ -32,9 +32,9 @@ export const AlertsInboxView: React.FC<AlertsInboxViewProps> = ({
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
 
   const filteredAlerts = alerts.filter((a) => {
-    if (activeTab === 'critical') return a.severity === 'critical';
-    if (activeTab === 'price_drops') return a.type === 'price_drop';
-    if (filterSeverity !== 'all') return a.severity === filterSeverity;
+    if (activeTab === 'critical' && a.severity !== 'critical') return false;
+    if (activeTab === 'price_drops' && a.type !== 'price_drop') return false;
+    if (filterSeverity !== 'all' && a.severity !== filterSeverity) return false;
     return true;
   });
 
