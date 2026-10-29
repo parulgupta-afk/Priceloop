@@ -32,7 +32,7 @@ export const AuthScreen: React.FC = () => {
   // Quick fill demo credentials
   const handleFillDemo = () => {
     setEmail("demo@priceloop.ai");
-    setPassword("demo12345");
+    setPassword("Demo123!");
     setLocalError(null);
   };
 

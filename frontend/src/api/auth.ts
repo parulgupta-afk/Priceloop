@@ -40,6 +40,6 @@ export function logout() {
 
 /** Demo credentials created by backend/scripts/seed_demo.py */
 export const DEMO_CREDENTIALS = {
-  email: 'demo@priceloop.local',
-  password: 'demo12345',
+  email: 'demo@priceloop.ai',
+  password: 'Demo123!',
 };
