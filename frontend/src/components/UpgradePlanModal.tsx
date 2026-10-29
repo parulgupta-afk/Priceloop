@@ -30,6 +30,8 @@ export const UpgradePlanModal: React.FC<UpgradePlanModalProps> = ({ isOpen, onCl
       setSubmittingPlan(null);
       if (e instanceof ApiError && e.status === 503) {
         setCheckoutError('Billing is not set up on this server yet (Stripe keys not configured).');
+      } else if (e instanceof ApiError && e.message) {
+        setCheckoutError(e.message);
       } else {
         setCheckoutError('Could not start checkout. Please try again.');
       }

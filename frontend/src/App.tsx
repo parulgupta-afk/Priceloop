@@ -359,6 +359,22 @@ export default function App() {
         isOpen={isAlertModalOpen}
         onClose={() => setIsAlertModalOpen(false)}
         onSaveAlert={(config) => {
+          const newAlert: AlertItem = {
+            id: 'alert-' + Date.now(),
+            productId: selectedProduct.id,
+            productName: selectedProduct.name,
+            sku: selectedProduct.sku,
+            imageUrl: selectedProduct.imageUrl,
+            severity: config.thresholdPercent > 5 ? 'critical' : 'warning',
+            timestamp: new Date().toISOString(),
+            timeAgo: 'Just now',
+            type: 'margin_threshold',
+            metricTitle: 'Deviation Threshold',
+            metricBadge: `±${config.thresholdPercent}%`,
+            description: `Automated alert active for ${selectedProduct.name}. Sensitivity set to ±${config.thresholdPercent}%.`,
+            resolved: false,
+          };
+          setAlerts((prev) => [newAlert, ...prev]);
           showToast(
             `Alert trigger configured: ±${config.thresholdPercent}% threshold enabled for ${selectedProduct.name}.`
           );
