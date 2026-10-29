@@ -1,15 +1,20 @@
 """
-Sync demo seed for SQLite/Postgres (matches SessionLocal stack).
+Seed demo user + products using ONLY real books.toscrape.com URLs.
 
-  cd backend && python -m scripts.seed_demo_sync
+No synthetic brand catalogs (Sony/Amazon/etc.). No invented multi-day
+price series. Prices come from a live fetch via the books_toscrape adapter
+when the network is available; otherwise listings are stored without
+observations and you run scrape later.
 
-Creates demo@priceloop.ai / Demo123! with sample products, listings, and price history.
+Usage (from backend/, DB reachable):
+
+  python -m scripts.seed_demo_sync
+
+Login: demo@priceloop.ai / Demo123!
 """
 from __future__ import annotations
-import random
+
 import sys
-from datetime import datetime, timedelta
-from decimal import Decimal
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,40 +25,71 @@ from app.core.database import SessionLocal, engine
 from app.core.security import hash_password
 from app.models.base import Base
 from app.models.user import User
-from app.models.product import Product, ProductListing, PriceObservation, Source
+from app.models.product import Product, ProductListing, Source
+from app.services.scrape_service import scrape_listing
 
 DEMO_EMAIL = "demo@priceloop.ai"
 DEMO_PASSWORD = "Demo123!"
 
-CATALOG = [
+# Real product pages on books.toscrape.com (site exists for scraping practice).
+# Titles are the published page titles; prices are NOT hard-coded into history —
+# they are observed via the adapter when scrape succeeds.
+BOOKS_TOSCRAPE_CATALOG = [
     {
-        "name": "Sony WH-1000XM5",
-        "brand": "Sony",
-        "category": "Audio",
-        "base": 348.0,
+        "name": "A Light in the Attic",
+        "brand": "Books to Scrape",
+        "category": "Poetry",
         "url": "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
-        "source": "books_toscrape",
     },
     {
-        "name": "Logitech MX Master 3S",
-        "brand": "Logitech",
-        "category": "Peripherals",
-        "base": 95.99,
+        "name": "Tipping the Velvet",
+        "brand": "Books to Scrape",
+        "category": "Historical Fiction",
         "url": "https://books.toscrape.com/catalogue/tipping-the-velvet_999/index.html",
-        "source": "demo",
     },
     {
-        "name": "Apple AirPods Pro 2",
-        "brand": "Apple",
-        "category": "Audio",
-        "base": 249.0,
-        "url": "https://example.com/airpods",
-        "source": "demo",
+        "name": "Soumission",
+        "brand": "Books to Scrape",
+        "category": "Fiction",
+        "url": "https://books.toscrape.com/catalogue/soumission_998/index.html",
+    },
+    {
+        "name": "Sharp Objects",
+        "brand": "Books to Scrape",
+        "category": "Mystery",
+        "url": "https://books.toscrape.com/catalogue/sharp-objects_997/index.html",
+    },
+    {
+        "name": "Sapiens: A Brief History of Humankind",
+        "brand": "Books to Scrape",
+        "category": "History",
+        "url": "https://books.toscrape.com/catalogue/sapiens-a-brief-history-of-humankind_996/index.html",
+    },
+    {
+        "name": "The Requiem Red",
+        "brand": "Books to Scrape",
+        "category": "Young Adult",
+        "url": "https://books.toscrape.com/catalogue/the-requiem-red_995/index.html",
+    },
+    {
+        "name": "The Dirty Little Secrets of Getting Your Dream Job",
+        "brand": "Books to Scrape",
+        "category": "Business",
+        "url": "https://books.toscrape.com/catalogue/the-dirty-little-secrets-of-getting-your-dream-job_994/index.html",
+    },
+    {
+        "name": "The Coming Woman: A Novel Based on the Life of the Infamous Feminist Victoria Woodhull",
+        "brand": "Books to Scrape",
+        "category": "Default",
+        "url": "https://books.toscrape.com/catalogue/the-coming-woman-a-novel-based-on-the-life-of-the-infamous-feminist-victoria-woodhull_993/index.html",
     },
 ]
 
+SOURCE_NAME = "books_toscrape"
+SOURCE_BASE = "https://books.toscrape.com"
 
-def main():
+
+def main() -> None:
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
@@ -66,54 +102,70 @@ def main():
         else:
             print("user exists", DEMO_EMAIL)
 
-        for item in CATALOG:
+        source = db.query(Source).filter(Source.name == SOURCE_NAME).first()
+        if not source:
+            source = Source(name=SOURCE_NAME, base_url=SOURCE_BASE, is_active=True)
+            db.add(source)
+            db.flush()
+            print("created source", SOURCE_NAME)
+
+        scraped_ok = 0
+        scraped_fail = 0
+
+        for item in BOOKS_TOSCRAPE_CATALOG:
             existing = (
                 db.query(Product)
                 .filter(Product.user_id == user.id, Product.name == item["name"])
                 .first()
             )
             if existing:
-                print("skip product", item["name"])
+                print("skip product (already seeded)", item["name"][:60])
                 continue
-            src = db.query(Source).filter(Source.name == item["source"]).first()
-            if not src:
-                src = Source(name=item["source"], base_url=f"https://{item['source']}.example")
-                db.add(src)
-                db.flush()
+
             product = Product(
                 user_id=user.id,
                 name=item["name"],
-                brand=item["brand"],
-                category=item["category"],
+                brand=item.get("brand"),
+                category=item.get("category"),
             )
             db.add(product)
             db.flush()
+
             listing = ProductListing(
                 product_id=product.id,
-                source_id=src.id,
+                source_id=source.id,
                 external_url=item["url"],
                 title=item["name"],
-                current_price=Decimal(str(item["base"])),
-                currency="USD",
+                currency="GBP",
             )
             db.add(listing)
             db.flush()
-            # synthetic history
-            price = item["base"]
-            for days_ago in range(30, 0, -1):
-                price = max(1.0, price * (1 + random.uniform(-0.03, 0.03)))
-                db.add(
-                    PriceObservation(
-                        listing_id=listing.id,
-                        price=Decimal(str(round(price, 2))),
-                        currency="USD",
-                        availability="IN_STOCK",
-                        scraped_at=datetime.utcnow() - timedelta(days=days_ago),
-                    )
+            db.commit()
+
+            # Live observation from the real page (no invented history).
+            try:
+                obs = scrape_listing(db, listing.id)
+                db.commit()
+                scraped_ok += 1
+                print(
+                    f"seeded + scraped  {item['name'][:50]!r}  "
+                    f"price={obs.price} {obs.currency}"
                 )
-            print("seeded", item["name"])
-        db.commit()
-        print("done. login:", DEMO_EMAIL, DEMO_PASSWORD)
+            except Exception as exc:
+                db.rollback()
+                scraped_fail += 1
+                print(
+                    f"seeded listing only (scrape failed) {item['name'][:50]!r}: "
+                    f"{type(exc).__name__}: {exc}"
+                )
+                print("  → later: POST /api/listings/<id>/scrape after network is available")
+
+        print()
+        print("done.")
+        print(f"  login:   {DEMO_EMAIL} / {DEMO_PASSWORD}")
+        print(f"  source:  {SOURCE_NAME} only (permitted practice site)")
+        print(f"  scraped: {scraped_ok} ok, {scraped_fail} failed")
+        print("  history grows only from real scrapes / Celery jobs — no synthetic series.")
     finally:
         db.close()
 

@@ -45,11 +45,15 @@ celery -A app.workers.celery_app worker --loglevel=info
 cd frontend && npm install && npm run dev
 ```
 
-### Demo seed
+### Demo seed (real books.toscrape URLs only)
+
+No fake Sony/Amazon prices. Catalog points at [books.toscrape.com](https://books.toscrape.com)
+(explicitly scrapable). Seed **fetches live prices** into `price_observations`.
 
 ```bash
 cd backend && python -m scripts.seed_demo_sync
 # login: demo@priceloop.ai / Demo123!
+# if scrape fails offline: POST /api/listings/{id}/scrape later
 ```
 
 ### Load test (measure, do not invent numbers)
