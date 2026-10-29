@@ -1,0 +1,1 @@
+# ADR 003: Grounded AI insights\n\nStatistics computed in application code; LLM only narrates structured evidence.\nAvoids arithmetic hallucination and keeps outputs testable.\n

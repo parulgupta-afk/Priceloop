@@ -16,7 +16,7 @@ from app.models.base import Base
 
 logger = logging.getLogger("priceloop.api")
 
-app = FastAPI(title="Priceloop", version="0.5.0")
+app = FastAPI(title="Priceloop", version="0.6.0")
 
 # CORS: the frontend is deployed on its own origin (e.g. a Vercel domain),
 # so without this every browser request to the API is blocked. Configure

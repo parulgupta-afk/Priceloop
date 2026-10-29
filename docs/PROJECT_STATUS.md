@@ -1,34 +1,21 @@
-# PriceLoop — Project Status
+# PriceLoop — Project Status (v0.6)
 
-## IMPLEMENTED
+## Implemented
+- Auth (JWT, bcrypt, rate limits)
+- Products + search + ownership isolation
+- Price observations + history API + analytics
+- Scraper adapters (demo, books.toscrape) + Celery cooldown/beat
+- Redis rate limiting + cache-aside
+- Anomaly detection (z/IQR/%/MAD)
+- Product matching scores
+- Grounded insights
+- Alerts CRUD + evaluate
+- Stripe billing hooks
+- Health live/ready, metrics, request IDs
+- Docker Compose, Alembic, CI, load_test script, demo seed
 
-- Auth: register, login (JSON JWT), `/api/auth/me`, bcrypt passwords
-- Products: create/list/get with ownership checks
-- Billing: Stripe checkout hooks (optional keys)
-- Health: `/health` (legacy), `/health/live` (process liveness, no external dependencies), `/health/ready` (readiness with PostgreSQL and Redis connectivity verification returning 503 on dependency failure)
-- Security & Validation: Fail-fast production startup validation (`ENVIRONMENT=production` rejects SQLite, missing/weak `SECRET_KEY`, missing/invalid `REDIS_URL`, wildcard CORS origins `*`, and default `minioadmin` credentials)
-- SQLAlchemy + Alembic initial schema
-- Celery worker with sync scrape tasks
-- Scraper package + demo adapter + normalization
-- React/Vite frontend + Nginx production image
-- Docker Compose production stack (postgres, redis, migrate, backend, worker, frontend)
-- CI: backend tests, scraper tests, Alembic, frontend tsc + build
-- Portable JSON columns (Postgres JSONB / SQLite JSON for tests)
-
-## OPTIONAL / FUTURE
-
-- Full analytics/anomaly/forecast HTTP routes mounted on main
-- Live marketplace adapters (Amazon etc.)
-- pgvector embedding pipeline
-- Refresh tokens
-- Prometheus/Grafana
-
-## TEST DEPENDENCIES
-
-Install test tooling with:
-
-```bash
-pip install -r backend/requirements-dev.txt
-```
-
-Production images use `requirements.txt` only (no pytest).
+## Future / optional
+- Live Amazon/etc. adapters (terms-compliant)
+- Full LLM provider wiring for insights
+- Prometheus/Grafana exporters
+- Kubernetes, multi-region

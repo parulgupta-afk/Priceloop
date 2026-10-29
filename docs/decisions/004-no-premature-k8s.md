@@ -1,0 +1,1 @@
+# ADR 004: No Kubernetes in v1\n\nDocker Compose is enough for demo and early production. Add orchestration when multi-node ops demand it.\n

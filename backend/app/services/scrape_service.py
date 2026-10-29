@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.models.product import AvailabilityStatus, PriceObservation, ProductListing, Source
 from app.services.normalization import normalize_availability, normalize_price, normalize_title
+from app.core.resilience import retry_with_backoff
 
 _here = Path(__file__).resolve()
 for candidate in (
@@ -101,7 +102,7 @@ def scrape_listing(db: Session, listing_id: UUID) -> PriceObservation:
             source_name = source.name
 
     adapter = get_adapter(source_name)
-    raw = adapter.scrape(listing.external_url) or {}
+    raw = retry_with_backoff(lambda: adapter.scrape(listing.external_url) or {}, max_attempts=3, base_delay=0.4) or {}
 
     title = normalize_title(raw.get("title") or listing.title or "")
     price_val, detected_currency = normalize_price(raw.get("price"))

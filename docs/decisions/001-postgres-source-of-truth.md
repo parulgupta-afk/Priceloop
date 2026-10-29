@@ -1,0 +1,1 @@
+# ADR 001: PostgreSQL as source of truth\n\nPrice and product data live in Postgres. Redis is for rate limits, Celery, and short-lived cache only.\nRationale: durable history, constraints, migrations. Trade-off: higher latency than pure cache reads.\n

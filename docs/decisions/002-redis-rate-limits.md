@@ -1,0 +1,1 @@
+# ADR 002: Redis fixed-window rate limits\n\nShared counters across instances. Fail-open if Redis is down for login/search.\nTrade-off: possible over-admit during Redis outages vs hard downtime.\n
