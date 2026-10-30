@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class ListingCreate(BaseModel):
@@ -14,8 +14,7 @@ class ListingCreate(BaseModel):
 class ListingOut(ListingCreate):
     id: UUID
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProductCreate(BaseModel):
@@ -33,8 +32,7 @@ class ProductOut(BaseModel):
     created_at: datetime
     listings: List[ListingOut] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PriceObservationOut(BaseModel):
@@ -45,5 +43,4 @@ class PriceObservationOut(BaseModel):
     availability: str
     scraped_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
