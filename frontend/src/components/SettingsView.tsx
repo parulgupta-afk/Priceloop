@@ -41,8 +41,9 @@ export const SettingsView: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div>
-              <label className="font-mono text-gray-600 block mb-1">Scrape Frequency</label>
+              <label htmlFor="scrape-frequency" className="font-mono text-gray-600 block mb-1">Scrape Frequency</label>
               <select
+                id="scrape-frequency"
                 value={frequency}
                 onChange={(e) => setFrequency(e.target.value)}
                 className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 outline-none focus:border-[#0051d5]"
@@ -55,8 +56,9 @@ export const SettingsView: React.FC = () => {
             </div>
 
             <div>
-              <label className="font-mono text-gray-600 block mb-1">Base Currency</label>
+              <label htmlFor="base-currency" className="font-mono text-gray-600 block mb-1">Base Currency</label>
               <select
+                id="base-currency"
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
                 className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 outline-none focus:border-[#0051d5]"
@@ -109,16 +111,16 @@ export const SettingsView: React.FC = () => {
           </h3>
 
           <div className="space-y-2 text-xs">
-            <label className="flex items-center gap-2">
-              <input type="checkbox" defaultChecked className="rounded text-[#0051d5]" />
+            <label htmlFor="notify-email" className="flex items-center gap-2 cursor-pointer">
+              <input id="notify-email" type="checkbox" defaultChecked className="rounded text-[#0051d5]" />
               <span className="text-gray-700">Send Critical Price War alerts via Email</span>
             </label>
-            <label className="flex items-center gap-2">
-              <input type="checkbox" defaultChecked className="rounded text-[#0051d5]" />
+            <label htmlFor="notify-slack" className="flex items-center gap-2 cursor-pointer">
+              <input id="notify-slack" type="checkbox" defaultChecked className="rounded text-[#0051d5]" />
               <span className="text-gray-700">Slack Webhook channel integration (#pricing-ops)</span>
             </label>
-            <label className="flex items-center gap-2">
-              <input type="checkbox" defaultChecked className="rounded text-[#0051d5]" />
+            <label htmlFor="notify-inventory" className="flex items-center gap-2 cursor-pointer">
+              <input id="notify-inventory" type="checkbox" defaultChecked className="rounded text-[#0051d5]" />
               <span className="text-gray-700">Automated Shopify & Amazon Inventory sync</span>
             </label>
           </div>
