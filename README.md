@@ -256,7 +256,7 @@ python -m scripts.seed_demo_sync
 Default credentials created for local exploration:
 
 - **Email:** `demo@priceloop.ai`
-- **Password:** `demo12345`
+- **Password:** `Demo123!`
 
 You can also click the **"Fill Demo Credentials"** button on the frontend login screen to authenticate instantly.
 
@@ -321,7 +321,7 @@ Located in [`backend/app/services/matching_service.py`](backend/app/services/mat
 PriceLoop maintains high test coverage across unit, integration, and parser boundaries.
 
 ```bash
-# Run backend test suite (51 test cases)
+# Run backend test suite (56 test cases)
 cd backend
 python -m pytest tests/ -v
 
