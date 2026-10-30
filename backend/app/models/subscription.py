@@ -5,7 +5,7 @@ from datetime import datetime
 from sqlalchemy import Column, DateTime, Enum, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 
-from app.models.base import Base
+from app.models.base import Base, utc_now
 
 
 class PlanTier(str, enum.Enum):
@@ -40,4 +40,4 @@ class Subscription(Base):
     stripe_customer_id = Column(String, nullable=True)
     stripe_subscription_id = Column(String, nullable=True)
     current_period_end = Column(DateTime, nullable=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)

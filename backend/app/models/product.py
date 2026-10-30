@@ -11,7 +11,7 @@ from app.models.types import PortableJSON
 # pyrefly: ignore [missing-import]
 from sqlalchemy.orm import relationship, synonym
 
-from app.models.base import Base
+from app.models.base import Base, utc_now
 
 
 class AvailabilityStatus(str, enum.Enum):
@@ -29,7 +29,7 @@ class Source(Base):
     base_url = Column(String(500), nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     rate_limit_per_second = Column(Numeric(5, 2), default=1.0, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
 
     listings = relationship("ProductListing", back_populates="source_rel")
 
@@ -49,8 +49,8 @@ class Product(Base):
     image_url = Column(String(1000), nullable=True)
     attributes = Column(PortableJSON, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)
 
     owner_id = synonym("user_id")
 
@@ -72,7 +72,7 @@ class ProductListing(Base):
     match_confidence = Column(Numeric(4, 3), nullable=True)
     last_scraped_at = Column(DateTime, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
 
     url = synonym("external_url")
 
@@ -97,7 +97,7 @@ class PriceObservation(Base):
     price = Column(Numeric(12, 2), nullable=False)
     currency = Column(String(3), default="USD", nullable=False)
     availability = Column(String(12), default=AvailabilityStatus.IN_STOCK.value, nullable=False)
-    scraped_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    scraped_at = Column(DateTime, default=utc_now, nullable=False)
     raw_data = Column(PortableJSON, nullable=True)
 
     listing = relationship("ProductListing", back_populates="observations")

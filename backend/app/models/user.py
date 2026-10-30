@@ -7,7 +7,7 @@ from sqlalchemy import Boolean, Column, DateTime, Enum, String
 # pyrefly: ignore [missing-import]
 from sqlalchemy.dialects.postgresql import UUID
 
-from app.models.base import Base
+from app.models.base import Base, utc_now
 
 
 class UserRole(str, enum.Enum):
@@ -26,5 +26,5 @@ class User(Base):
     role = Column(Enum(UserRole), default=UserRole.USER, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     is_verified = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)
