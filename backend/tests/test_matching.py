@@ -23,3 +23,21 @@ def test_low_confidence_different_products():
     score = compute_match_score(a, b)
     assert score["confidence"] < 0.75
     assert score["level"] == "LOW"
+
+
+def test_exact_product_match_score():
+    a = _product("Sony WH-1000XM5", brand="Sony", model="WH-1000XM5")
+    b = _product("Sony WH-1000XM5", brand="Sony", model="WH-1000XM5")
+    score = compute_match_score(a, b)
+    assert score["confidence"] >= 0.95
+    assert score["level"] == "HIGH"
+    assert score["components"]["brand_match"] == 1.0
+
+
+def test_matching_handles_none_brand_and_model():
+    a = _product("Dell UltraSharp U2723QE 27 Inch 4K UHD")
+    b = _product("Dell UltraSharp Monitor 27 4K")
+    score = compute_match_score(a, b)
+    assert "confidence" in score
+    assert "components" in score
+    assert score["components"]["brand_match"] == 1.0

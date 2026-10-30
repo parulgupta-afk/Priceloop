@@ -106,3 +106,12 @@ def test_insights_grounded_shape(client, auth_headers):
     assert "summary" in body
     assert "limitations" in body
     assert "confidence" in body
+
+
+def test_alert_evaluate_endpoint(client, auth_headers):
+    headers = auth_headers("eval_alerts@priceloop.ai")
+    r = client.post("/api/alerts/evaluate", headers=headers)
+    assert r.status_code == 200
+    data = r.json()
+    assert "triggers" in data
+    assert isinstance(data["triggers"], list)
