@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 import json
 import logging
 
@@ -16,7 +17,24 @@ from app.models.base import Base
 
 logger = logging.getLogger("priceloop.api")
 
-app = FastAPI(title="Priceloop", version="0.6.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if settings.environment == "production":
+        # Enforce all production validations fail-fast
+        settings.validate_production()
+        # Production schema is managed by Alembic (see backend/alembic/), run
+        # once by a dedicated migrate step before this container starts --
+        # see docker-compose.prod.yml. Running create_all() here too would
+        # create tables Alembic doesn't know about, and the two can drift.
+        pass
+    else:
+        # Local dev / tests: just create whatever's missing, no migration
+        # ceremony needed for quick iteration.
+        Base.metadata.create_all(bind=engine)
+    yield
+
+
+app = FastAPI(title="Priceloop", version="0.6.0", lifespan=lifespan)
 
 # CORS: the frontend is deployed on its own origin (e.g. a Vercel domain),
 # so without this every browser request to the API is blocked. Configure
@@ -35,22 +53,6 @@ app.include_router(products.router, prefix="/api/products", tags=["products"])
 app.include_router(billing.router, prefix="/api/billing", tags=["billing"])
 app.include_router(prices.router, prefix="/api", tags=["prices"])
 app.include_router(intelligence.router, prefix="/api", tags=["intelligence"])
-
-
-@app.on_event("startup")
-def on_startup():
-    if settings.environment == "production":
-        # Enforce all production validations fail-fast
-        settings.validate_production()
-        # Production schema is managed by Alembic (see backend/alembic/), run
-        # once by a dedicated migrate step before this container starts --
-        # see docker-compose.prod.yml. Running create_all() here too would
-        # create tables Alembic doesn't know about, and the two can drift.
-        pass
-    else:
-        # Local dev / tests: just create whatever's missing, no migration
-        # ceremony needed for quick iteration.
-        Base.metadata.create_all(bind=engine)
 
 
 @app.get("/metrics")
