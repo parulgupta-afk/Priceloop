@@ -208,14 +208,15 @@ export default function App() {
     showToast(`Repricing applied: ${strategyName} updated target to $${newTargetPrice.toFixed(2)}.`);
   };
 
-  // Handle resolving an alert
+  // Handle resolving or reopening an alert
   const handleResolveAlert = (alertId: string, actionName: string) => {
+    const isUnresolve = actionName === 'unresolve' || actionName.toLowerCase() === 'reopen';
     setAlerts((prev) =>
-      prev.map((a) => (a.id === alertId ? { ...a, resolved: true } : a))
+      prev.map((a) => (a.id === alertId ? { ...a, resolved: !isUnresolve } : a))
     );
 
     const alert = alerts.find((a) => a.id === alertId);
-    if (alert && alert.newPrice && actionName.includes('Match')) {
+    if (!isUnresolve && alert && alert.newPrice && actionName.includes('Match')) {
       handleSaveStrategy(alert.productId, alert.newPrice, 'Alert Quick Match');
     }
   };

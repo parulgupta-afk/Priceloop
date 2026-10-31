@@ -27,19 +27,21 @@ export const AlertsInboxView: React.FC<AlertsInboxViewProps> = ({
   onResolveAlert,
   onOpenNewRuleModal,
 }) => {
-  const [activeTab, setActiveTab] = useState<'all' | 'critical' | 'price_drops'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'critical' | 'price_drops' | 'resolved'>('all');
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
 
   const filteredAlerts = alerts.filter((a) => {
-    if (activeTab === 'critical' && a.severity !== 'critical') return false;
-    if (activeTab === 'price_drops' && a.type !== 'price_drop') return false;
+    if (activeTab === 'resolved') return a.resolved;
+    if (activeTab === 'critical' && (a.severity !== 'critical' || a.resolved)) return false;
+    if (activeTab === 'price_drops' && (a.type !== 'price_drop' || a.resolved)) return false;
     if (filterSeverity !== 'all' && a.severity !== filterSeverity) return false;
     return true;
   });
 
   const criticalCount = alerts.filter((a) => a.severity === 'critical' && !a.resolved).length;
   const totalUnresolved = alerts.filter((a) => !a.resolved).length;
+  const totalResolved = alerts.filter((a) => a.resolved).length;
 
   const handleAction = (alert: AlertItem, actionText: string) => {
     onResolveAlert(alert.id, actionText);
@@ -133,6 +135,20 @@ export const AlertsInboxView: React.FC<AlertsInboxViewProps> = ({
             }`}
           >
             Price Drops
+          </button>
+
+          <button
+            onClick={() => setActiveTab('resolved')}
+            className={`py-3 px-1 text-xs sm:text-sm font-semibold flex items-center gap-2 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'resolved'
+                ? 'border-emerald-600 text-emerald-700'
+                : 'border-transparent text-[#76777d] hover:text-emerald-700'
+            }`}
+          >
+            <span>Resolved</span>
+            <span className="bg-emerald-50 text-emerald-700 font-mono text-xs font-bold py-0.5 px-2 rounded-full border border-emerald-200">
+              {totalResolved}
+            </span>
           </button>
         </nav>
       </div>
@@ -247,9 +263,18 @@ export const AlertsInboxView: React.FC<AlertsInboxViewProps> = ({
               {/* Actions Footer */}
               <div className="flex gap-2 mt-auto pt-2">
                 {alert.resolved ? (
-                  <div className="w-full py-2 bg-emerald-50 text-emerald-700 font-mono text-xs font-bold rounded flex items-center justify-center gap-1.5 border border-emerald-200">
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Resolved</span>
+                  <div className="w-full flex items-center justify-between gap-2">
+                    <div className="flex-1 py-2 bg-emerald-50 text-emerald-700 font-mono text-xs font-bold rounded flex items-center justify-center gap-1.5 border border-emerald-200">
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Resolved</span>
+                    </div>
+                    <button
+                      onClick={() => handleAction(alert, 'unresolve')}
+                      className="px-3 py-2 text-xs font-mono text-[#76777d] hover:text-[#0b1c30] hover:bg-gray-100 rounded border border-[#e2e8f0] transition-colors cursor-pointer"
+                      title="Reopen Alert"
+                    >
+                      Reopen
+                    </button>
                   </div>
                 ) : (
                   <>
