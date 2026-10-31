@@ -35,21 +35,36 @@ def compute_match_score(a: Product, b: Product) -> dict[str, Any]:
     brand_b = _norm(b.brand) or (name_b.split()[0] if name_b else "")
     model_a = _norm(getattr(a, "model", None) or "")
     model_b = _norm(getattr(b, "model", None) or "")
+    clean_model_a = re.sub(r"[\s\-_]", "", model_a)
+    clean_model_b = re.sub(r"[\s\-_]", "", model_b)
 
     title_sim = SequenceMatcher(None, name_a, name_b).ratio()
     brand_match = 1.0 if brand_a and brand_a == brand_b else (
         0.6 if brand_a and brand_b and (brand_a in brand_b or brand_b in brand_a) else 0.0
     )
-    model_sim = SequenceMatcher(None, model_a, model_b).ratio() if model_a and model_b else 0.0
+    if clean_model_a and clean_model_b and clean_model_a == clean_model_b:
+        model_sim = 1.0
+    elif model_a and model_b:
+        model_sim = SequenceMatcher(None, model_a, model_b).ratio()
+    else:
+        model_sim = 0.0
 
     # Exact-ish SKU/gtin if present
     sku_bonus = 0.0
-    if getattr(a, "sku", None) and getattr(b, "sku", None) and _norm(a.sku) == _norm(b.sku):
-        sku_bonus = 0.25
-    if getattr(a, "gtin", None) and getattr(b, "gtin", None) and _norm(a.gtin) == _norm(b.gtin):
-        sku_bonus = 0.35
+    has_sku = False
+    if getattr(a, "sku", None) and getattr(b, "sku", None):
+        has_sku = True
+        if _norm(a.sku) == _norm(b.sku):
+            sku_bonus = 0.25
+    if getattr(a, "gtin", None) and getattr(b, "gtin", None):
+        has_sku = True
+        if _norm(a.gtin) == _norm(b.gtin):
+            sku_bonus = 0.35
 
-    final = 0.30 * title_sim + 0.25 * brand_match + 0.25 * model_sim + sku_bonus
+    if has_sku:
+        final = 0.30 * title_sim + 0.20 * brand_match + 0.25 * model_sim + sku_bonus
+    else:
+        final = 0.35 * title_sim + 0.30 * brand_match + 0.35 * model_sim
 
     # Variant penalties: different storage/color => not the same offer
     stor_a, stor_b = _storage_tokens(a.name or ""), _storage_tokens(b.name or "")
