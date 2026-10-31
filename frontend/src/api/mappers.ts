@@ -206,6 +206,8 @@ export function mapBackendProductToUI(
   };
 }
 
+export const mapBackendProduct = mapBackendProductToUI;
+
 export function mapAnalyticsToMarketStats(
   products: Product[]
 ): {

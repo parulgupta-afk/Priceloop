@@ -12,7 +12,10 @@ export const INITIAL_RULES: PriceRule[] = [];
 
 export const MARKET_STATS: MarketPositionStats = {
   cheapestCount: 0,
-  midPackCount: 0,
-  expensiveCount: 0,
-  totalTracked: 0,
+  cheapestPercent: 0,
+  midTierCount: 0,
+  midTierPercent: 0,
+  premiumCount: 0,
+  premiumPercent: 0,
+  totalProducts: 0,
 };
