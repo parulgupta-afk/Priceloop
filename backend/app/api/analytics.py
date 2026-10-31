@@ -1,3 +1,4 @@
+# DEPRECATED: async orphan — use mounted intelligence/prices (sync). Do not mount without AsyncSession.
 from typing import Annotated
 from uuid import UUID
 

@@ -12,7 +12,8 @@ from app.api import intelligence
 from app.core.config import settings
 from app.core.database import engine
 from app.models import product, subscription, user  # noqa: F401
-from app.models import alert as alert_model  # noqa: F401  # noqa: F401 - ensures models are registered
+from app.models import alert as alert_model  # noqa: F401
+from app.models import scraper_ops as scraper_ops_model  # noqa: F401
 from app.models.base import Base
 
 logger = logging.getLogger("priceloop.api")
@@ -34,7 +35,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Priceloop", version="0.6.0", lifespan=lifespan)
+app = FastAPI(title="Priceloop", version="1.0.0", lifespan=lifespan)
 
 # CORS: the frontend is deployed on its own origin (e.g. a Vercel domain),
 # so without this every browser request to the API is blocked. Configure

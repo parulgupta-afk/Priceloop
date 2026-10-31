@@ -119,3 +119,76 @@ def evaluate_alerts(
 ):
     """Evaluate active alerts for the current user (dev/demo)."""
     return {"triggers": alert_service.evaluate_user_alerts(db, current_user.id)}
+
+
+# --- PriceLoop 2.0 Phase 4–5 extensions ---
+
+@router.get("/products/{product_id}/summary", dependencies=[Depends(limit_products_read)])
+def product_summary(
+    product_id: UUID,
+    days: int = Query(30, ge=7, le=365),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Combined analytics + anomalies + insight for dashboard cards."""
+    from app.models.product import Product
+    from app.services.analytics_service import get_product_analytics
+    from app.services.anomaly_service import detect_price_anomalies
+    from app.services.insight_service import generate_insight
+    p = db.query(Product).filter(Product.id == product_id, Product.user_id == current_user.id).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return {
+        "product_id": str(product_id),
+        "name": p.name,
+        "analytics": get_product_analytics(db, product_id, days=days),
+        "anomalies": detect_price_anomalies(db, product_id, days=max(days, 60)),
+        "insight": generate_insight(db, product_id, days=days),
+    }
+
+
+class AnalystQuery(BaseModel):
+    query: str = Field(..., min_length=3, max_length=2000)
+
+
+@router.post("/ai/query", dependencies=[Depends(limit_ai)])
+def ai_query(
+    payload: AnalystQuery,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Evidence-grounded market analyst (tool calling; no raw SQL for the model)."""
+    from app.services.ai_analyst_service import run_analyst
+    return run_analyst(db, current_user.id, payload.query.strip())
+
+
+@router.get("/scrape-jobs", dependencies=[Depends(limit_products_read)])
+def list_scrape_jobs(
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Recent scrape job audit rows for listings owned by the user."""
+    from app.models.scraper_ops import ScrapeJob
+    from app.models.product import Product, ProductListing
+    q = (
+        db.query(ScrapeJob)
+        .join(ProductListing, ScrapeJob.listing_id == ProductListing.id)
+        .join(Product, ProductListing.product_id == Product.id)
+        .filter(Product.user_id == current_user.id)
+        .order_by(ScrapeJob.created_at.desc())
+        .limit(limit)
+    )
+    jobs = q.all()
+    return [
+        {
+            "id": str(j.id),
+            "listing_id": str(j.listing_id) if j.listing_id else None,
+            "source_name": j.source_name,
+            "status": j.status.value if hasattr(j.status, "value") else str(j.status),
+            "duration_ms": j.duration_ms,
+            "error_message": j.error_message,
+            "created_at": j.created_at.isoformat() if j.created_at else None,
+        }
+        for j in jobs
+    ]

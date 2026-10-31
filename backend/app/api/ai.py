@@ -1,3 +1,4 @@
+# DEPRECATED: async orphan — use POST /api/ai/query on intelligence router.
 from typing import Annotated
 from uuid import UUID
 
