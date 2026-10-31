@@ -352,6 +352,15 @@ When running with `ENVIRONMENT=production`, the application performs strict fail
 
 ---
 
+## Demo credentials
+
+After `python -m scripts.seed_demo_sync` (books.toscrape URLs):
+
+- Email: `demo@priceloop.ai`
+- Password: `Demo123!`
+
+See `docs/DEMO_SCRIPT.md` for a recruiter walkthrough.
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
