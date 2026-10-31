@@ -1,25 +1,21 @@
 """
-Simple short-term price forecasting.
-Starts with Moving Average + Exponential Smoothing.
-Later: XGBoost / Prophet / LSTM.
-Always returns a confidence interval / uncertainty measure.
+Experimental short-horizon price forecasting from stored observations.
+Baselines: last value, moving average, exponential smoothing + simple trend.
+Always labeled experimental — not financial advice.
 """
-
+from __future__ import annotations
 from datetime import datetime, timedelta, timezone
+from statistics import pstdev
 from typing import Any
 from uuid import UUID
-
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
+from sqlalchemy.orm import Session
 from app.models.product import PriceObservation, ProductListing
 
 
 def _moving_average(prices: list[float], window: int = 7) -> float | None:
-    if len(prices) < window:
-        window = len(prices)
-    if window == 0:
+    if not prices:
         return None
+    window = min(window, len(prices))
     return sum(prices[-window:]) / window
 
 
@@ -33,109 +29,71 @@ def _exponential_smoothing(prices: list[float], alpha: float = 0.3) -> float | N
 
 
 def _simple_trend(prices: list[float]) -> float:
-    """Very rough linear slope (price units per observation)."""
     n = len(prices)
     if n < 2:
         return 0.0
-    x_mean = (n - 1) / 2
+    x_mean = (n - 1) / 2.0
     y_mean = sum(prices) / n
     num = sum((i - x_mean) * (prices[i] - y_mean) for i in range(n))
-    den = sum((i - x_mean) ** 2 for i in range(n))
-    if den == 0:
-        return 0.0
+    den = sum((i - x_mean) ** 2 for i in range(n)) or 1.0
     return num / den
 
 
-async def forecast_price(
-    db: AsyncSession,
+def forecast_product_price(
+    db: Session,
     product_id: UUID,
     horizon_days: int = 7,
-    history_days: int = 60,
+    history_days: int = 90,
 ) -> dict[str, Any]:
-    """
-    Produce a short-term forecast with a confidence band.
-    """
-    cutoff = datetime.now(timezone.utc) - timedelta(days=history_days)
-    result = await db.execute(
-        select(PriceObservation)
+    horizon_days = max(1, min(horizon_days, 30))
+    history_days = max(14, min(history_days, 365))
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=history_days)
+    rows = (
+        db.query(PriceObservation)
         .join(ProductListing)
-        .where(
-            ProductListing.product_id == product_id,
-            PriceObservation.scraped_at >= cutoff,
-        )
+        .filter(ProductListing.product_id == product_id, PriceObservation.scraped_at >= cutoff)
         .order_by(PriceObservation.scraped_at.asc())
+        .all()
     )
-    observations = list(result.scalars().all())
-
-    if len(observations) < 3:
+    if len(rows) < 5:
         return {
             "product_id": str(product_id),
-            "horizon_days": horizon_days,
-            "message": "Not enough history to forecast (need ≥ 3 observations)",
-            "forecast": None,
+            "forecast_horizon_days": horizon_days,
+            "status": "insufficient_data",
+            "observation_count": len(rows),
+            "confidence": "none",
+            "label": "experimental",
+            "message": "Need at least 5 observations for experimental forecast.",
         }
-
-    prices = [float(o.price) for o in observations]
-    current = prices[-1]
-    currency = observations[-1].currency
-
-    ma = _moving_average(prices, window=min(7, len(prices)))
-    es = _exponential_smoothing(prices)
-    trend = _simple_trend(prices[-14:] if len(prices) >= 14 else prices)
-
-    # Blend for the point forecast
-    point = None
-    if ma is not None and es is not None:
-        point = 0.5 * ma + 0.5 * es + trend * (horizon_days / 2)
-    elif es is not None:
-        point = es + trend * (horizon_days / 2)
-    else:
-        point = current
-
-    point = round(point, 2)
-
-    # Simple uncertainty band based on recent volatility
-    recent = prices[-14:] if len(prices) >= 14 else prices
-    mean_r = sum(recent) / len(recent)
-    if len(recent) > 1 and mean_r > 0:
-        variance = sum((p - mean_r) ** 2 for p in recent) / (len(recent) - 1)
-        std = variance ** 0.5
-        # Widen the band a bit for longer horizons
-        band = std * (1 + 0.1 * horizon_days)
-    else:
-        band = current * 0.03  # 3% fallback
-
-    low = round(max(0, point - band), 2)
-    high = round(point + band, 2)
-
-    # Direction label
-    if point < current * 0.98:
-        direction = "Likely Down"
-    elif point > current * 1.02:
-        direction = "Likely Up"
-    else:
-        direction = "Likely Stable"
-
-    # Confidence heuristic (more data + lower volatility → higher confidence)
-    data_factor = min(len(prices) / 30, 1.0)
-    vol_factor = max(0.0, 1.0 - (band / current if current else 1))
-    confidence = round(0.4 * data_factor + 0.6 * vol_factor, 2)
-    confidence = max(0.35, min(0.92, confidence))
-
+    prices = [float(o.price) for o in rows]
+    currency = rows[-1].currency
+    last = prices[-1]
+    ma = _moving_average(prices, 7) or last
+    es = _exponential_smoothing(prices) or last
+    trend = _simple_trend(prices)
+    predicted = es + trend * horizon_days
+    try:
+        sigma = pstdev(prices[-min(14, len(prices)):]) if len(prices) >= 2 else abs(last) * 0.05
+    except Exception:
+        sigma = abs(last) * 0.05
+    lower = max(0.0, predicted - 1.64 * sigma)
+    upper = predicted + 1.64 * sigma
     return {
         "product_id": str(product_id),
-        "horizon_days": horizon_days,
+        "forecast_horizon_days": horizon_days,
         "history_days": history_days,
-        "observation_count": len(observations),
-        "current_price": current,
+        "observation_count": len(rows),
         "currency": currency,
-        "forecast": {
-            "point": point,
-            "low": low,
-            "high": high,
-            "direction": direction,
-            "confidence": confidence,
+        "last_price": round(last, 4),
+        "predicted_point": round(predicted, 4),
+        "predicted_price_range": {"lower": round(lower, 4), "upper": round(upper, 4)},
+        "baselines": {
+            "last_value": round(last, 4),
+            "moving_average_7": round(ma, 4),
+            "exponential_smoothing": round(es, 4),
         },
-        "methods": ["moving_average", "exponential_smoothing", "linear_trend"],
-        "note": "Probabilistic estimate only. Not financial advice.",
+        "model": "exponential_smoothing_plus_trend",
+        "confidence": "low" if len(rows) < 15 else "experimental",
+        "label": "experimental",
+        "disclaimer": "Experimental estimate from historical observations only. Not financial or pricing advice.",
     }

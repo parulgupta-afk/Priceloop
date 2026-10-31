@@ -4,7 +4,7 @@
  */
 
 const API_BASE =
-  (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000/api/v1';
+  (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000/api';
 
 const TOKEN_KEY = 'priceloop_access_token';
 const REFRESH_KEY = 'priceloop_refresh_token';

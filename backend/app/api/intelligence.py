@@ -192,3 +192,27 @@ def list_scrape_jobs(
         }
         for j in jobs
     ]
+
+@router.get("/products/{product_id}/forecast", dependencies=[Depends(limit_products_read)])
+def product_forecast(
+    product_id: UUID,
+    horizon_days: int = Query(7, ge=1, le=30),
+    history_days: int = Query(90, ge=14, le=365),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from app.models.product import Product
+    from app.services.forecast_service import forecast_product_price
+    p = db.query(Product).filter(Product.id == product_id, Product.user_id == current_user.id).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return forecast_product_price(db, product_id, horizon_days=horizon_days, history_days=history_days)
+
+
+@router.post("/alerts/evaluate-deduped", dependencies=[Depends(limit_ai)])
+def evaluate_alerts_deduped(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from app.services.notification_service import evaluate_with_dedupe
+    return evaluate_with_dedupe(db, current_user.id)

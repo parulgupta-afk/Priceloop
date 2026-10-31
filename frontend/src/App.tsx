@@ -23,9 +23,40 @@ import { UpgradePlanModal } from './components/UpgradePlanModal';
 import { HistoryModal } from './components/HistoryModal';
 import { AuthScreen } from './components/AuthScreen';
 import { useAuth } from './context/AuthContext';
+import { listProducts } from './api/products';
+import { mapBackendProduct } from './api/mappers';
 
 export default function App() {
+  
   const { user, isLoading, logout } = useAuth();
+
+  // Prefer backend catalog when logged in (Phase 8 — reduce mock reliance)
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    listProducts()
+      .then((rows) => {
+        if (cancelled || !Array.isArray(rows)) return;
+        try {
+          const mapped = rows.map((r: any) =>
+            typeof mapBackendProduct === 'function' ? mapBackendProduct(r) : r,
+          );
+          if (mapped.length) {
+            setProducts(mapped as Product[]);
+            setSelectedProduct(mapped[0] as Product);
+          }
+        } catch {
+          /* keep local state if mapper shape differs */
+        }
+      })
+      .catch(() => {
+        /* offline / unauthenticated API — leave empty or local */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
 
   const [currentView, setCurrentView] = useState<ViewMode>('intro');
   const [products, setProducts] = useState<Product[]>(() => {
