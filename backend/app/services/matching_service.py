@@ -70,9 +70,18 @@ def compute_match_score(a: Product, b: Product) -> dict[str, Any]:
     else:
         label = "unlikely"
 
+    if final >= 0.85:
+        level = "HIGH"
+    elif final >= 0.70:
+        level = "MEDIUM"
+    else:
+        level = "LOW"
+
     return {
         "score": final,
+        "confidence": final,
         "label": label,
+        "level": level,
         "matching_method": "hybrid_fuzzy_v2",
         "components": {
             "title_similarity": round(title_sim, 3),
